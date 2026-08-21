@@ -10,6 +10,7 @@ import { ExamResultMascotPage } from './exam/ExamResultMascotPage';
 import { ExamMilestonePage } from './exam/ExamMilestonePage';
 import { ExamReviewPage } from './exam/ExamReviewPage';
 import { EXAM_SUBJECTS } from './exam/examData';
+import { calculateExamScore } from '../utils/scoring';
 
 interface ExamScreenProps {
   questions: Question[];
@@ -186,36 +187,22 @@ export const ExamScreen: React.FC<ExamScreenProps> = ({
     answers: Record<string, 'A' | 'B' | 'C' | 'D'>,
     timeTakenSeconds: number
   ) => {
-    let correctCount = 0;
-    let wrongCount = 0;
-    let skippedCount = 0;
-
-    activeQuestions.forEach((q) => {
-      const userAns = answers[q.id];
-      if (!userAns) {
-        skippedCount += 1;
-      } else if (userAns === q.correct_ans) {
-        correctCount += 1;
-      } else {
-        wrongCount += 1;
-      }
-    });
-
-    const negativePenalty = setupState.negativeMarking ? wrongCount * 0.25 : 0;
-    const score = Math.max(0, correctCount * 1 - negativePenalty);
-    const totalMarks = activeQuestions.length;
-    const pointsEarned = correctCount * 10;
+    const scoring = calculateExamScore(
+      answers,
+      activeQuestions,
+      setupState.negativeMarking ? 0.25 : 0
+    );
 
     const resultSummary: ExamSessionResult = {
       examTitle: setupState.presetId ? setupState.subjectName : 'মক পরীক্ষা',
       subjectName: setupState.subjectName,
-      totalQuestions: activeQuestions.length,
-      score,
-      totalMarks,
-      correctCount,
-      wrongCount,
-      skippedCount,
-      pointsEarned,
+      totalQuestions: scoring.totalMarks,
+      score: scoring.score,
+      totalMarks: scoring.totalMarks,
+      correctCount: scoring.correctCount,
+      wrongCount: scoring.wrongCount,
+      skippedCount: scoring.skippedCount,
+      pointsEarned: scoring.pointsEarned,
       timeTakenMinutes: Math.ceil(timeTakenSeconds / 60),
       timeTakenSeconds,
       questions: activeQuestions,
@@ -242,10 +229,10 @@ export const ExamScreen: React.FC<ExamScreenProps> = ({
 
     const updatedProgress: UserProgress = {
       ...progress,
-      points: (progress.points || 0) + pointsEarned,
+      points: (progress.points || 0) + scoring.pointsEarned,
       examsCompleted: (progress.examsCompleted || 0) + 1,
-      totalCorrect: (progress.totalCorrect || 0) + correctCount,
-      totalWrong: (progress.totalWrong || 0) + wrongCount,
+      totalCorrect: (progress.totalCorrect || 0) + scoring.correctCount,
+      totalWrong: (progress.totalWrong || 0) + scoring.wrongCount,
       streakDays: Math.max(1, progress.streakDays || 1),
       examHistory: [newHistoryItem, ...(progress.examHistory || [])],
     };

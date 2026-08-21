@@ -64,7 +64,7 @@ interface ChorchaAITutorProps {
 const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
-  content: `আসসালামু আলাইকুম! আমি **চর্চা AI** (Chorcha AI), তোমার ব্যক্তিগত ভার্সিটি ও মেডিকেল অ্যাডমিশন মেন্টর। 🎓\n\nপদার্থবিজ্ঞান, রসায়ন, উচ্চতর গণিত বা জীববিজ্ঞানের যেকোনো জটিল প্রশ্ন, শর্টকাট কৌশল, নো-ক্যালকুলেটর ট্রিকস বা বিগত বছরের প্রশ্ন নিয়ে আমাকে জিজ্ঞেস করতে পারো। এমনকি কোনো প্রশ্নের ছবি আপলোড করলেও আমি নির্ভুল সমাধান ও শর্টকাটসহ বুঝিয়ে দেবো!\n\n💡 *যেকোনো উত্তরের নিচে 'Add to Google Tasks' অথবা 'Save Note to Keep' এ ক্লিক করে সহজে নোট সংরক্ষণ করতে পারবে।*`,
+  content: `আসসালামু আলাইকুম! আমি **যাচাই AI** (JACHAI AI), তোমার ব্যক্তিগত ভার্সিটি ও মেডিকেল অ্যাডমিশন মেন্টর। 🎓\n\nপদার্থবিজ্ঞান, রসায়ন, উচ্চতর গণিত বা জীববিজ্ঞানের যেকোনো জটিল প্রশ্ন, শর্টকাট কৌশল, নো-ক্যালকুলেটর ট্রিকস বা বিগত বছরের প্রশ্ন নিয়ে আমাকে জিজ্ঞেস করতে পারো। এমনকি কোনো প্রশ্নের ছবি আপলোড করলেও আমি নির্ভুল সমাধান ও শর্টকাটসহ বুঝিয়ে দেবো!\n\n💡 *যেকোনো উত্তরের নিচে 'Add to Google Tasks' অথবা 'Save Note to Keep' এ ক্লিক করে সহজে নোট সংরক্ষণ করতে পারবে।*`,
   timestamp: Date.now(),
 };
 
@@ -183,8 +183,8 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
       const firstLine = msg.content.split('\n')[0].replace(/[#*`_✅📝🚀⚠️🎯]/g, '').trim();
       const taskTitle =
         firstLine.length > 0 && firstLine.length < 80
-          ? `[চর্চা AI] ${firstLine}`
-          : `[চর্চা AI এডমিশন নোট] ${new Date().toLocaleDateString()}`;
+          ? `[যাচাই AI] ${firstLine}`
+          : `[যাচাই AI এডমিশন নোট] ${new Date().toLocaleDateString()}`;
 
       const res = await addTaskToGoogleTasks(token, {
         title: taskTitle,
@@ -210,7 +210,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
     try {
       const firstLine = msg.content.split('\n')[0].replace(/[#*`_✅📝🚀⚠️🎯]/g, '').trim();
       const noteTitle =
-        firstLine.length > 0 && firstLine.length < 60 ? firstLine : 'চর্চা AI শর্টকাট ও সমাধান নোট';
+        firstLine.length > 0 && firstLine.length < 60 ? firstLine : 'যাচাই AI শর্টকাট ও সমাধান নোট';
 
       const keepData = createKeepNotePayload(noteTitle, msg.content);
 
@@ -484,7 +484,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-extrabold text-slate-900 text-base sm:text-lg leading-tight tracking-tight truncate">
-                  চর্চা AI মেন্টর
+                  যাচাই AI মেন্টর
                 </h2>
                 {/* Clickable Model Selector Pill */}
                 <button
@@ -511,6 +511,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
             <button
               id="btn-header-calendar-sync"
               onClick={() => setShowCalendarModal(true)}
+              aria-label="Google Calendar এ ভর্তি পরীক্ষার তারিখ সিঙ্ক করুন"
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer"
               title="Google Calendar এ ভর্তি পরীক্ষার তারিখ সিঙ্ক করুন"
             >
@@ -522,6 +523,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
             <button
               id="btn-header-clear-history"
               onClick={handleClearHistory}
+              aria-label="চ্যাট হিস্ট্রি মুছুন"
               className="p-2.5 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               title="চ্যাট হিস্ট্রি মুছুন"
             >
@@ -532,6 +534,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
             <button
               id="btn-header-model-settings"
               onClick={() => setShowModelModal(true)}
+              aria-label="মডেল ও API কী কনফিগারেশন"
               className="p-2.5 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
               title="মডেল ও API কী কনফিগারেশন"
             >
@@ -542,6 +545,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
             <button
               id="btn-header-close-chat"
               onClick={onClose}
+              aria-label="চ্যাট উইন্ডো বন্ধ করুন"
               className="p-2.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer ml-1"
               title="চ্যাট বন্ধ করুন"
             >
@@ -832,6 +836,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
               type="button"
               id="btn-ai-upload-photo"
               onClick={() => fileInputRef.current?.click()}
+              aria-label="প্রশ্নের ছবি আপলোড করুন"
               className="p-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors cursor-pointer shrink-0"
               title="প্রশ্নের ছবি তুলে সমাধান করুন"
             >
@@ -849,6 +854,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="যেকোনো ভর্তি প্রশ্ন, নো-ক্যালকুলেটর শর্টকাট বা অধ্যায় সম্পর্কে লিখুন..."
                 disabled={isLoading}
+                aria-label="AI টিউটরের জন্য প্রশ্ন বা প্রম্পট লিখুন"
                 className="w-full px-4 py-2.5 rounded-xl bg-slate-50 text-slate-900 text-[15px] sm:text-base leading-relaxed focus:outline-hidden focus:ring-2 focus:ring-blue-600 border border-slate-300 transition-all placeholder:text-slate-400 resize-none overflow-y-auto"
                 style={{ maxHeight: '140px', minHeight: '44px' }}
               />
@@ -859,6 +865,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
               type="submit"
               id="btn-ai-send"
               disabled={isLoading || (!inputText.trim() && !selectedImage)}
+              aria-label="বার্তা পাঠান"
               className="p-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white transition-all shadow-xs active:scale-95 shrink-0 cursor-pointer"
               title="বার্তা পাঠান"
             >
@@ -887,6 +894,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
               </div>
               <button
                 onClick={() => setShowModelModal(false)}
+                aria-label="কনফিগারেশন বন্ধ করুন"
                 className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />

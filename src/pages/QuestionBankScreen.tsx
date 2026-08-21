@@ -31,12 +31,14 @@ import { SubjectInfo, Question, ExamCategory, QuestionSubject, Chapter } from '.
 import { SUBJECTS_DATA, UNIVERSITIES_DATA, CHAPTERS_DATA } from '../data/admissionData';
 import QuestionCard from '../components/QuestionCard';
 import EmptyState from '../components/common/EmptyState';
+import { QuestionListSkeleton } from '../components/common/SkeletonLoader';
 
 interface QuestionBankScreenProps {
   questions: Question[];
   bookmarks: string[];
   onToggleBookmark: (id: string) => void;
   onAskAI: (question: Question) => void;
+  isLoading?: boolean;
 }
 
 export function matchesCategory(q: Question, category: ExamCategory): boolean {
@@ -147,6 +149,7 @@ export const QuestionBankScreen: React.FC<QuestionBankScreenProps> = ({
   bookmarks,
   onToggleBookmark,
   onAskAI,
+  isLoading = false,
 }) => {
   // Navigation states
   const [activeTab, setActiveTab] = useState<'subject' | 'model_test' | 'university'>('subject');
@@ -366,7 +369,11 @@ export const QuestionBankScreen: React.FC<QuestionBankScreenProps> = ({
         )}
 
         {/* Questions List */}
-        {paginatedQuestions.length > 0 ? (
+        {isLoading ? (
+          <div className="space-y-3 pt-1" id="question-bank-skeleton-loading">
+            <QuestionListSkeleton count={4} />
+          </div>
+        ) : paginatedQuestions.length > 0 ? (
           <div className="space-y-3 pt-1">
             {paginatedQuestions.map((q, idx) => (
               <QuestionCard

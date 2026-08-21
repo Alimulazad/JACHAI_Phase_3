@@ -1,53 +1,8 @@
 import { describe, it, expect } from 'vitest';
-
-// Question Type
-interface QuestionOption {
-  id: string;
-  text: string;
-}
-
-interface Question {
-  id: string;
-  questionText: string;
-  correctAnswer: string;
-  options?: QuestionOption[];
-}
-
-// Exam Scoring Logic Implementation
-export function calculateExamScore(
-  answers: Record<string, string>,
-  questions: Question[],
-  negativeMarking: number = 0.25
-) {
-  let correctCount = 0;
-  let wrongCount = 0;
-  let skippedCount = 0;
-
-  for (const q of questions) {
-    const selected = answers[q.id];
-    if (!selected) {
-      skippedCount++;
-    } else if (selected.trim().toUpperCase() === q.correctAnswer.trim().toUpperCase()) {
-      correctCount++;
-    } else {
-      wrongCount++;
-    }
-  }
-
-  const score = correctCount * 1.0 - wrongCount * negativeMarking;
-  const accuracy = correctCount + wrongCount > 0 ? (correctCount / (correctCount + wrongCount)) * 100 : 0;
-
-  return {
-    correctCount,
-    wrongCount,
-    skippedCount,
-    score: Math.max(0, Number(score.toFixed(2))),
-    accuracy: Number(accuracy.toFixed(1)),
-  };
-}
+import { calculateExamScore, ScorableQuestion } from '../src/utils/scoring';
 
 describe('Exam Scoring Logic & Negative Marking', () => {
-  const sampleQuestions: Question[] = [
+  const sampleQuestions: ScorableQuestion[] = [
     { id: 'q1', questionText: 'Q1', correctAnswer: 'A' },
     { id: 'q2', questionText: 'Q2', correctAnswer: 'B' },
     { id: 'q3', questionText: 'Q3', correctAnswer: 'C' },

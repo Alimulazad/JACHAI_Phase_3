@@ -37,8 +37,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           return (
             <button
               key={item.id}
+              type="button"
               id={`nav-tab-${item.id}`}
               onClick={() => onSelectTab(item.id)}
+              aria-label={`${item.label} ট্যাব`}
+              aria-current={isActive ? 'page' : undefined}
               className={`flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-xl transition-colors duration-200 relative cursor-pointer select-none ${
                 isActive
                   ? 'text-[#0F766E] dark:text-emerald-400'

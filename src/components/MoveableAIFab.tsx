@@ -42,8 +42,9 @@ export const MoveableAIFab: React.FC<MoveableAIFabProps> = ({ onOpenAITutor }) =
       <button
         onClick={handleClick}
         type="button"
+        aria-label="যাচাই AI টিউটর খুলুন"
         className="relative group p-3 sm:p-3.5 rounded-full bg-gradient-to-tr from-[#1E40AF] via-[#2563EB] to-[#3B82F6] text-white shadow-[0_8px_25px_rgba(37,99,235,0.45)] border-2 border-white/80 flex items-center justify-center transition-all hover:shadow-[0_12px_30px_rgba(37,99,235,0.6)]"
-        title="চর্চা AI টিউটর (ড্র্যাগ করে সরানো যায়)"
+        title="যাচাই AI টিউটর (ড্র্যাগ করে সরানো যায়)"
       >
         {/* Pulsing outer ring */}
         <span className="absolute -inset-1 rounded-full bg-blue-400/30 animate-ping pointer-events-none opacity-75 duration-1000" />
@@ -56,7 +57,7 @@ export const MoveableAIFab: React.FC<MoveableAIFabProps> = ({ onOpenAITutor }) =
 
         {/* Floating Mini Label */}
         <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
-          চর্চা AI
+          যাচাই AI
         </span>
       </button>
     </motion.div>

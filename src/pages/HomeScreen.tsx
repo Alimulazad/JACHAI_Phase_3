@@ -161,7 +161,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       )}
 
-      {/* 3. চারটা quick-action আইকন বাটন এক সারিতে: প্রশ্নব্যাংক, দ্রুত প্র্যাকটিস, মক পরীক্ষা, চর্চা AI */}
+      {/* 3. চারটা quick-action আইকন বাটন এক সারিতে: প্রশ্নব্যাংক, দ্রুত প্র্যাকটিস, মক পরীক্ষা, যাচাই AI */}
       <div className="grid grid-cols-4 gap-2 sm:gap-3">
         {/* Button 1: প্রশ্নব্যাংক */}
         <button
@@ -205,7 +205,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </span>
         </button>
 
-        {/* Button 4: চর্চা AI */}
+        {/* Button 4: যাচাই AI */}
         <button
           id="btn-quick-ai-tutor"
           onClick={onOpenAITutor}
@@ -215,7 +215,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <Bot className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 mt-2 text-center leading-tight whitespace-nowrap">
-            চর্চা AI
+            যাচাই AI
           </span>
         </button>
       </div>

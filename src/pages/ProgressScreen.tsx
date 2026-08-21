@@ -253,7 +253,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
         </div>
         <div className="space-y-1 grow">
           <div className="flex items-center gap-2">
-            <h4 className="font-bold text-sm sm:text-base">চর্চা AI পর্যালোচনা ও পরামর্শ</h4>
+            <h4 className="font-bold text-sm sm:text-base">যাচাই AI পর্যালোচনা ও পরামর্শ</h4>
             <span className="text-[10px] bg-amber-400 text-slate-950 font-bold px-2 py-0.5 rounded font-mono uppercase">
               {targetUni.shortCode} Focus
             </span>
@@ -273,7 +273,7 @@ export const ProgressScreen: React.FC<ProgressScreenProps> = ({
             onClick={onOpenAITutor}
             className="inline-flex items-center gap-1 mt-1 text-xs font-bold text-amber-300 hover:text-amber-200 cursor-pointer"
           >
-            <span>চর্চা AI এর সাথে বিস্তারিত আলোচনা করুন</span>
+            <span>যাচাই AI এর সাথে বিস্তারিত আলোচনা করুন</span>
             <span>→</span>
           </button>
         </div>

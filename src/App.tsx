@@ -254,6 +254,7 @@ export function App() {
                       bookmarks={userProgress.bookmarks}
                       onToggleBookmark={handleToggleBookmark}
                       onAskAI={handleOpenAITutorForQuestion}
+                      isLoading={isLoadingQuestions}
                     />
                   }
                 />

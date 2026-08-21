@@ -283,6 +283,7 @@ const QuestionCardComponent: React.FC<QuestionCardProps> = ({
               type="button"
               id={`btn-ask-ai-${question.id}`}
               onClick={() => onAskAI(question)}
+              aria-label="Gemini AI থেকে ব্যাখ্যা নিন"
               className="flex items-center gap-1 px-2 py-1 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-[#1E40AF] dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60 rounded-lg text-[11px] font-semibold transition-colors duration-150 cursor-pointer"
               title="Gemini AI থেকে ব্যাখ্যা নিন"
             >
@@ -297,6 +298,7 @@ const QuestionCardComponent: React.FC<QuestionCardProps> = ({
               type="button"
               id={`btn-bookmark-${question.id}`}
               onClick={onToggleBookmark}
+              aria-label={isBookmarked ? 'দাগানো থেকে সরান' : 'বুকমার্ক করুন'}
               className={`p-1.5 rounded-lg transition-colors duration-150 cursor-pointer ${
                 isBookmarked
                   ? 'text-amber-500 hover:text-amber-600'
@@ -313,6 +315,7 @@ const QuestionCardComponent: React.FC<QuestionCardProps> = ({
             type="button"
             id={`btn-report-${question.id}`}
             onClick={handleOpenReportModal}
+            aria-label="প্রশ্নের ভুল রিপোর্ট করুন"
             className={`p-1.5 rounded-lg transition-colors duration-150 cursor-pointer ${
               isReported
                 ? 'text-rose-500'
@@ -328,6 +331,7 @@ const QuestionCardComponent: React.FC<QuestionCardProps> = ({
             type="button"
             id={`btn-peek-${question.id}`}
             onClick={() => setPeekAnswer(!isPeeking)}
+            aria-label={isPeeking ? 'পিক বন্ধ করুন' : 'উত্তর পিক করুন (সরাসরি সঠিক উত্তর দেখুন)'}
             className={`p-1.5 rounded-xl transition-colors duration-150 cursor-pointer shadow-2xs flex items-center justify-center ${
               isPeeking
                 ? 'bg-[#047857] text-white ring-2 ring-emerald-400'
@@ -352,6 +356,7 @@ const QuestionCardComponent: React.FC<QuestionCardProps> = ({
               <button
                 type="button"
                 onClick={() => setShowReportModal(false)}
+                aria-label="রিপোর্ট ডায়ালগ বন্ধ করুন"
                 className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer"
               >
                 <X className="w-4 h-4" />

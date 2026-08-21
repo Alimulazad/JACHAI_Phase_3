@@ -20,6 +20,8 @@ const OPTION_LETTER_MAP: Record<'A' | 'B' | 'C' | 'D', string> = {
 
 const OPTION_KEYS: ('A' | 'B' | 'C' | 'D')[] = ['A', 'B', 'C', 'D'];
 
+const STORAGE_KEY = 'jachai_active_live_exam_v1';
+
 const toBnNum = (n: number | string): string => {
   const bnDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
   return String(n).replace(/[0-9]/g, (d) => bnDigits[parseInt(d, 10)]);
@@ -121,11 +123,77 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
   onFinishExam,
   onExit,
 }) => {
-  const [secondsRemaining, setSecondsRemaining] = useState<number>(durationMinutes * 60);
-  const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({});
+  // Load initial state from localStorage if available and matching questions
+  const getInitialExamState = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        const currentQIds = questions.map((q) => q.id).join(',');
+        const savedQIds = (parsed.questionIds || []).join(',');
+        if (currentQIds === savedQIds && parsed.answers) {
+          const elapsed = Math.floor((Date.now() - (parsed.savedAt || Date.now())) / 1000);
+          const remaining = Math.max(5, (parsed.secondsRemaining ?? durationMinutes * 60) - elapsed);
+          return {
+            initialAnswers: parsed.answers as Record<string, 'A' | 'B' | 'C' | 'D'>,
+            initialSeconds: remaining,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn('Could not parse saved exam state:', e);
+    }
+    return {
+      initialAnswers: {},
+      initialSeconds: durationMinutes * 60,
+    };
+  };
+
+  const initialConfig = getInitialExamState();
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(initialConfig.initialSeconds);
+  const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>(initialConfig.initialAnswers);
   const [showSubmitModal, setShowSubmitModal] = useState<boolean>(false);
   const [showExitModal, setShowExitModal] = useState<boolean>(false);
   const [showNavigator, setShowNavigator] = useState<boolean>(false);
+
+  // Clear persisted exam state helper
+  const clearExamStorage = useCallback(() => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.warn('Failed to clear exam storage:', e);
+    }
+  }, []);
+
+  // Save state continuously to localStorage
+  useEffect(() => {
+    try {
+      const payload = {
+        title,
+        questionIds: questions.map((q) => q.id),
+        answers,
+        secondsRemaining,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch (err) {
+      console.warn('Failed to save exam state:', err);
+    }
+  }, [answers, secondsRemaining, title, questions]);
+
+  // Prevent accidental page reload or closing tab while exam is in progress
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'আপনার চলমান পরীক্ষা বন্ধ হয়ে যাবে। আপনি কি নিশ্চিত?';
+      return e.returnValue;
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   // Timer countdown
   useEffect(() => {
@@ -167,9 +235,16 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
   const isTimeCritical = secondsRemaining <= 60; // Under 1 minute
 
   const handleSubmit = () => {
+    clearExamStorage();
     const timeTaken = durationMinutes * 60 - secondsRemaining;
     setShowSubmitModal(false);
     onFinishExam(answers, Math.max(1, timeTaken));
+  };
+
+  const handleConfirmExit = () => {
+    clearExamStorage();
+    setShowExitModal(false);
+    onExit();
   };
 
   const handleScrollToQuestion = (qId: string) => {
@@ -200,7 +275,10 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
       <div className="sticky top-0 z-30 bg-[#F8FAFC] dark:bg-slate-900 px-4 pt-3 pb-3 border-b border-slate-200 dark:border-slate-800 shadow-2xs">
         <div className="flex items-center justify-between relative mb-1">
           <button
+            type="button"
             onClick={() => setShowExitModal(true)}
+            aria-label="পরীক্ষা থেকে বের হন"
+            title="পরীক্ষা থেকে বের হন"
             className="p-1.5 -ml-1 text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white rounded-full hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors duration-150 cursor-pointer"
           >
             <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
@@ -216,8 +294,9 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
           <button
             type="button"
             onClick={() => setShowNavigator(true)}
-            className="p-1.5 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-xl transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
+            aria-label="প্রশ্ন নেভিগেটর ওপেন করুন"
             title="প্রশ্ন নেভিগেটর"
+            className="p-1.5 text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900 rounded-xl transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold"
           >
             <LayoutGrid className="w-4 h-4" />
           </button>
@@ -293,6 +372,7 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
           <button
             type="button"
             onClick={() => setShowNavigator(true)}
+            aria-label={`প্রশ্ন নেভিগেটর (${toBnNum(answeredCount)} / ${toBnNum(questions.length)})`}
             className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-black/20 hover:bg-black/30 text-white text-xs font-bold transition-colors cursor-pointer border border-white/20"
           >
             <LayoutGrid className="w-3.5 h-3.5" />
@@ -303,6 +383,7 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
           <button
             type="button"
             onClick={() => setShowSubmitModal(true)}
+            aria-label="পরীক্ষা সাবমিট করুন"
             className="px-5 py-2 bg-white/20 hover:bg-white/30 active:scale-95 text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-all cursor-pointer border border-white/30"
           >
             সাবমিট করো
@@ -326,6 +407,7 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowNavigator(false)}
+                aria-label="নেভিগেটর বন্ধ করুন"
                 className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -361,6 +443,7 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
                       key={q.id}
                       type="button"
                       onClick={() => handleScrollToQuestion(q.id)}
+                      aria-label={`প্রশ্ন ${toBnNum(idx + 1)}${isAnswered ? ' (উত্তর দেওয়া হয়েছে)' : ''}`}
                       className={`h-11 rounded-xl text-xs sm:text-sm font-bold font-mono transition-all cursor-pointer flex items-center justify-center border ${
                         isAnswered
                           ? 'bg-[#047857] text-white border-emerald-700 shadow-xs ring-2 ring-emerald-300/40'
@@ -379,6 +462,7 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowNavigator(false)}
+                aria-label="নেভিগেটর বন্ধ করুন"
                 className="w-full py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl transition-colors cursor-pointer text-center"
               >
                 বন্ধ করুন
@@ -403,6 +487,7 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowSubmitModal(false)}
+                aria-label="না, ফিরে যান"
                 className="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white rounded-lg cursor-pointer"
               >
                 না
@@ -410,6 +495,7 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
               <button
                 type="button"
                 onClick={handleSubmit}
+                aria-label="সাবমিট নিশ্চিত করুন"
                 className="px-4 py-2 bg-[#047857] hover:bg-[#065f46] text-white text-sm font-bold rounded-lg shadow-xs cursor-pointer"
               >
                 সাবমিট করো
@@ -429,13 +515,15 @@ export const ExamLivePage: React.FC<ExamLivePageProps> = ({
               <button
                 type="button"
                 onClick={() => setShowExitModal(false)}
+                aria-label="না, পরীক্ষায় থাকুন"
                 className="px-4 py-2 text-sm font-bold text-slate-300 hover:text-white rounded-lg cursor-pointer"
               >
                 না
               </button>
               <button
                 type="button"
-                onClick={onExit}
+                onClick={handleConfirmExit}
+                aria-label="বের হয়ে যান"
                 className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-bold rounded-lg shadow-xs cursor-pointer"
               >
                 বের হও
