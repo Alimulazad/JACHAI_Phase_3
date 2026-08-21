@@ -1,0 +1,497 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  Database, 
+  Lock, 
+  Unlock, 
+  ShieldCheck, 
+  ArrowLeft, 
+  AlertCircle, 
+  Sparkles,
+  Key,
+  CheckCircle2,
+  RefreshCw,
+  Cpu,
+  Layers,
+  HelpCircle,
+  Clock,
+  CheckCheck,
+  Activity
+} from 'lucide-react';
+import { Question, AdminDraftItem, AdminApiKeyConfig, AdminSystemStats } from '../types';
+import { 
+  fetchQuestions, 
+  createQuestion,
+  updateQuestion,
+  deleteQuestion,
+  verifyAdminPassword,
+  fetchAdminStatsApi,
+  fetchAdminKeysApi,
+  saveAdminKeysApi,
+  fetchAdminDraftsApi,
+  publishAdminDraftApi,
+  batchPublishAdminDraftsApi,
+  batchRejectAdminDraftsApi,
+  deleteAdminDraftApi,
+  updateAdminDraftApi
+} from '../services/api';
+
+import { AdminDashboardTab } from '../components/admin/AdminDashboardTab';
+import { AdminExtractTab } from '../components/admin/AdminExtractTab';
+import { AdminDraftsQueueTab } from '../components/admin/AdminDraftsQueueTab';
+import { AdminApiKeysTab } from '../components/admin/AdminApiKeysTab';
+import { AdminQuestionsTab } from '../components/admin/AdminQuestionsTab';
+import { AdminSystemHealthWidget } from '../components/admin/AdminSystemHealthWidget';
+
+interface AdminScreenProps {
+  onBackToApp: () => void;
+}
+
+export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [authError, setAuthError] = useState<string>('');
+  const [isVerifying, setIsVerifying] = useState<boolean>(false);
+
+  // Tab Navigation: 'dashboard' | 'extract' | 'drafts' | 'keys' | 'questions' | 'health'
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'extract' | 'drafts' | 'keys' | 'questions' | 'health'>('dashboard');
+
+  // Core Data States
+  const [stats, setStats] = useState<AdminSystemStats | null>(null);
+  const [keys, setKeys] = useState<AdminApiKeyConfig[]>([]);
+  const [drafts, setDrafts] = useState<AdminDraftItem[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoadingStats, setIsLoadingStats] = useState<boolean>(false);
+
+  // Check stored session auth
+  useEffect(() => {
+    const savedAuth = sessionStorage.getItem('varsity_admin_auth');
+    if (savedAuth === 'true') {
+      setIsAuthenticated(true);
+      loadAllAdminData();
+    }
+  }, []);
+
+  const loadAllAdminData = useCallback(async () => {
+    setIsLoading(true);
+    setIsLoadingStats(true);
+    try {
+      const [statsData, keysData, draftsData, questionsData] = await Promise.allSettled([
+        fetchAdminStatsApi(),
+        fetchAdminKeysApi(),
+        fetchAdminDraftsApi(),
+        fetchQuestions(),
+      ]);
+
+      if (statsData.status === 'fulfilled') setStats(statsData.value);
+      if (keysData.status === 'fulfilled') setKeys(keysData.value);
+      if (draftsData.status === 'fulfilled') setDrafts(draftsData.value);
+      if (questionsData.status === 'fulfilled') setQuestions(questionsData.value);
+    } catch (e) {
+      console.error('Failed to load admin data:', e);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingStats(false);
+    }
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setIsVerifying(true);
+
+    try {
+      const isValid = await verifyAdminPassword(passwordInput);
+      if (isValid) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem('varsity_admin_auth', 'true');
+        loadAllAdminData();
+      } else {
+        setAuthError('ভুল পাসওয়ার্ড! সঠিক অ্যাডমিন পাসওয়ার্ড দিন।');
+      }
+    } catch (err) {
+      setAuthError('সার্ভারের সাথে সংযোগ করা সম্ভব হয়নি।');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('varsity_admin_auth');
+    setPasswordInput('');
+  };
+
+  // Staging Draft Actions
+  const handleApproveSingleDraft = async (id: string) => {
+    await publishAdminDraftApi(id);
+    await loadAllAdminData();
+  };
+
+  const handleBatchApproveDrafts = async (ids: string[]) => {
+    await batchPublishAdminDraftsApi(ids);
+    await loadAllAdminData();
+  };
+
+  const handleBatchRejectDrafts = async (ids: string[]) => {
+    await batchRejectAdminDraftsApi(ids);
+    await loadAllAdminData();
+  };
+
+  const handleDeleteDraft = async (id: string) => {
+    await deleteAdminDraftApi(id);
+    await loadAllAdminData();
+  };
+
+  const handleUpdateDraft = async (id: string, payload: any) => {
+    await updateAdminDraftApi(id, payload);
+    await loadAllAdminData();
+  };
+
+  // Keys Actions
+  const handleSaveKeys = async (updatedKeys: AdminApiKeyConfig[]) => {
+    await saveAdminKeysApi(updatedKeys);
+    await loadAllAdminData();
+  };
+
+  // Question Bank Actions
+  const handleCreateQuestion = async (
+    q: Partial<Question>,
+    files?: { questionImageFile?: File | null; explanationImageFile?: File | null }
+  ) => {
+    await createQuestion(q, files);
+    await loadAllAdminData();
+  };
+
+  const handleUpdateQuestion = async (
+    id: string,
+    q: Partial<Question>,
+    files?: { questionImageFile?: File | null; explanationImageFile?: File | null }
+  ) => {
+    await updateQuestion(id, q, files);
+    await loadAllAdminData();
+  };
+
+  const handleDeleteQuestion = async (id: string) => {
+    await deleteQuestion(id);
+    await loadAllAdminData();
+  };
+
+  // If Not Authenticated, show Modern Security Login Screen
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden font-sans">
+        {/* Background Subtle Gradient Blobs */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="sm:mx-auto sm:w-full sm:max-w-md z-10">
+          <button
+            id="admin-btn-back-to-app"
+            onClick={onBackToApp}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 mb-6 mx-auto px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 transition-all cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>স্টুডেন্ট অ্যাপ্লিকেশনে ফিরে যান</span>
+          </button>
+
+          <div className="flex justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-400/30">
+              <Database className="w-7 h-7 text-white" />
+            </div>
+          </div>
+          <h2 className="mt-4 text-center text-2xl font-black text-white tracking-tight">
+            JACHAI Control Center
+          </h2>
+          <p className="mt-1 text-center text-xs text-slate-400">
+            নিরাপদ অ্যাডমিন অ্যাক্সেস ও AI পাইপলাইন ম্যানেজমেন্ট
+          </p>
+        </div>
+
+        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0 z-10">
+          <div className="bg-slate-900/90 border border-slate-800/90 py-8 px-6 shadow-2xl rounded-3xl backdrop-blur-xl sm:px-8 space-y-6">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-300 mb-2">
+                  অ্যাডমিন সিকিউরিটি পাসওয়ার্ড
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="password"
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    placeholder="পাসওয়ার্ড প্রদান করুন..."
+                    className="block w-full pl-9 pr-3 py-2.5 bg-slate-950/80 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all"
+                    required
+                  />
+                </div>
+              </div>
+
+              {authError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isVerifying}
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded-xl shadow-md text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-98 transition-all disabled:opacity-50 cursor-pointer"
+              >
+                {isVerifying ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>যাচাই হচ্ছে...</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="w-4 h-4" />
+                    <span>লগইন করুন</span>
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="pt-4 border-t border-slate-800 text-center">
+              <span className="text-[11px] text-slate-500 flex items-center justify-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                <span>End-to-End Staging Security Protocol</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-900 font-sans text-slate-100 pb-16">
+      {/* Top Navbar */}
+      <header className="bg-slate-950/90 text-white border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Brand and back */}
+            <div className="flex items-center gap-3">
+              <button
+                id="admin-btn-back-to-app"
+                onClick={onBackToApp}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>স্টুডেন্ট অ্যাপ</span>
+              </button>
+
+              <div className="flex items-center gap-2 border-l border-slate-700 pl-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-inner">
+                  <Database className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-sm sm:text-base font-bold text-white tracking-tight">JACHAI Admin Hub</h1>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      v2.5
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 hidden sm:block">AI ডেটা পাইপলাইন ও লাইভ ম্যানেজমেন্ট</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="flex items-center gap-2">
+              <button
+                id="admin-btn-refresh-stats"
+                onClick={loadAllAdminData}
+                disabled={isLoading}
+                title="রিফ্রেশ করুন"
+                className={`p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer ${
+                  isLoading ? 'animate-spin text-blue-400' : ''
+                }`}
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+
+              <button
+                id="admin-btn-logout"
+                onClick={handleLogout}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 text-xs sm:text-sm font-medium transition-all cursor-pointer"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">লগআউট</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Sub Navigation Bar */}
+          <div className="flex items-center space-x-1 overflow-x-auto scrollbar-none py-2 border-t border-slate-800/80">
+            <button
+              id="admin-tab-dashboard"
+              onClick={() => setActiveTab('dashboard')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'dashboard'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Cpu className="w-4 h-4" />
+              <span>ড্যাশবোর্ড ও ওভারভিউ</span>
+            </button>
+
+            <button
+              id="admin-tab-extract"
+              onClick={() => setActiveTab('extract')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'extract'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>AI ডেটা এক্সট্রাক্টর</span>
+            </button>
+
+            <button
+              id="admin-tab-drafts"
+              onClick={() => setActiveTab('drafts')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all relative cursor-pointer ${
+                activeTab === 'drafts'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <CheckCheck className="w-4 h-4 text-emerald-400" />
+              <span>অনুমোদন কিউ (Pending)</span>
+              {stats && stats.pendingDrafts > 0 && (
+                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-amber-500 text-slate-950">
+                  {stats.pendingDrafts}
+                </span>
+              )}
+            </button>
+
+            <button
+              id="admin-tab-keys"
+              onClick={() => setActiveTab('keys')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'keys'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Key className="w-4 h-4 text-cyan-400" />
+              <span>এপিআই কী ও ফেইলওভার</span>
+              {stats && (
+                <span className="ml-1 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                  {stats.openRouterKeysCount} Keys
+                </span>
+              )}
+            </button>
+
+            <button
+              id="admin-tab-health"
+              onClick={() => setActiveTab('health')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'health'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+              <span>সিস্টেম হেলথ ও ল্যাটেন্সি</span>
+            </button>
+
+            <button
+              id="admin-tab-questions"
+              onClick={() => setActiveTab('questions')}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
+                activeTab === 'questions'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>লাইভ প্রশ্নব্যাংক ({questions.length})</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        {activeTab === 'dashboard' && (
+          <AdminDashboardTab
+            stats={stats}
+            isLoadingStats={isLoadingStats}
+            onRefreshStats={loadAllAdminData}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+          />
+        )}
+
+        {activeTab === 'health' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Activity className="w-6 h-6 text-emerald-400" />
+                  রিয়েল-টাইম ওপেনরাউটার হেলথ ও ল্যাটেন্সি টেলিমেট্রি
+                </h2>
+                <p className="text-xs text-slate-400 mt-1">
+                  OpenRouter ক্লাউড এন্ডপয়েন্ট রেসপন্স স্পিড, ল্যাটেন্সি ট্রেন্ড এবং কী-পুল ব্যবহারের রিয়েল-টাইম লাইভ ট্র্যাকার
+                </p>
+              </div>
+            </div>
+            <AdminSystemHealthWidget
+              onNavigateToKeys={() => setActiveTab('keys')}
+            />
+          </div>
+        )}
+
+        {activeTab === 'extract' && (
+          <AdminExtractTab
+            onExtractionComplete={loadAllAdminData}
+            onNavigateToDrafts={() => setActiveTab('drafts')}
+          />
+        )}
+
+        {activeTab === 'drafts' && (
+          <AdminDraftsQueueTab
+            drafts={drafts}
+            isLoading={isLoading}
+            onRefresh={loadAllAdminData}
+            onApprovePublish={handleApproveSingleDraft}
+            onBatchApprovePublish={handleBatchApproveDrafts}
+            onBatchReject={handleBatchRejectDrafts}
+            onDeleteDraft={handleDeleteDraft}
+            onUpdateDraft={handleUpdateDraft}
+            onNavigateToExtract={() => setActiveTab('extract')}
+          />
+        )}
+
+        {activeTab === 'keys' && (
+          <AdminApiKeysTab
+            keys={keys}
+            isLoading={isLoading}
+            onRefreshKeys={loadAllAdminData}
+            onSaveKeys={handleSaveKeys}
+          />
+        )}
+
+        {activeTab === 'questions' && (
+          <AdminQuestionsTab
+            questions={questions}
+            isLoading={isLoading}
+            onRefresh={loadAllAdminData}
+            onCreateQuestion={handleCreateQuestion}
+            onUpdateQuestion={handleUpdateQuestion}
+            onDeleteQuestion={handleDeleteQuestion}
+          />
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default AdminScreen;
