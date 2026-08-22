@@ -32,6 +32,46 @@ body {
   min-height: 100vh;
 }
 
+/* Ensure inputs, textareas, and selects inside light/white containers always have crisp dark text */
+.bg-white input,
+.bg-white select,
+.bg-white textarea,
+.bg-slate-50 input,
+.bg-slate-50 select,
+.bg-slate-50 textarea,
+.bg-slate-100 input,
+.bg-slate-100 select,
+.bg-slate-100 textarea,
+input.bg-white,
+select.bg-white,
+textarea.bg-white,
+input.bg-slate-50,
+select.bg-slate-50,
+textarea.bg-slate-50,
+input.bg-slate-100,
+select.bg-slate-100,
+textarea.bg-slate-100,
+input.bg-emerald-50,
+select.bg-emerald-50,
+textarea.bg-emerald-50 {
+  color: #0F172A !important;
+}
+
+select option {
+  background-color: #FFFFFF;
+  color: #0F172A !important;
+}
+
+.dark select option {
+  background-color: #1E293B;
+  color: #F8FAFC !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
 /* Accessibility Focus Ring Styles */
 :focus-visible {
   outline: 2px solid #6366F1;

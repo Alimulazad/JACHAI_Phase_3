@@ -1,6 +1,6 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
-import { INITIAL_QUESTIONS, CHAPTERS_DATA, INITIAL_KNOWLEDGE_SNIPPETS } from '../src/data/admissionData.js';
+import { INITIAL_QUESTIONS, CHAPTERS_DATA, SUBJECTS_DATA, INITIAL_KNOWLEDGE_SNIPPETS } from '../src/data/admissionData.js';
 import { Question, KnowledgeSnippet, TopicRecord } from '../src/types.js';
 import { logger } from './utils/logger.js';
 import { runMigrations } from './migrations.js';
@@ -1137,6 +1137,181 @@ export async function deleteQuestionFromDb(id: string): Promise<boolean> {
   memoryStore.questions.delete(id);
   await query('DELETE FROM questions WHERE id = $1', [id]);
   return true;
+}
+
+export async function bulkImportQuestions(rawQuestions: any[]): Promise<{ count: number; questions: Question[] }> {
+  const normalizedQuestions: Question[] = [];
+
+  for (const q of rawQuestions) {
+    let subject_id = q.subject_id || q.subject || 'physics_1';
+    if (subject_id === 'physics') subject_id = 'physics_1';
+    if (subject_id === 'chemistry') subject_id = 'chemistry_1';
+    if (subject_id === 'math') subject_id = 'math_1';
+    if (subject_id === 'biology') subject_id = 'biology_1';
+
+    let subject_name = q.subject_name;
+    if (!subject_name) {
+      const matchedSub = SUBJECTS_DATA.find((s) => s.id === subject_id);
+      subject_name = matchedSub ? matchedSub.name : 'পদার্থবিজ্ঞান ১ম পত্র';
+    }
+
+    let paper: '1st' | '2nd' = '1st';
+    if (q.paper === 2 || q.paper === '2' || q.paper === '2nd') {
+      paper = '2nd';
+    }
+
+    let chapter_id = q.chapter_id || q.chapterId || 'phy1_ch1';
+    let chapter_name = q.chapter_name;
+    if (!chapter_name && Array.isArray(CHAPTERS_DATA)) {
+      const chap = CHAPTERS_DATA.find((c) => c.id === chapter_id);
+      if (chap) chapter_name = chap.name;
+    }
+    if (!chapter_name) chapter_name = 'অধ্যায়';
+
+    let topic_id = q.topic_id || undefined;
+    let topic_name = q.topic_name || q.topic || undefined;
+
+    if (topic_id) {
+      const topicRec = memoryStore.topics.get(topic_id) || (await getTopicById(topic_id));
+      if (topicRec) {
+        if (!topic_name) topic_name = topicRec.bangla_name || topicRec.name;
+        if (!q.chapter_id && !q.chapterId && topicRec.chapter_id) chapter_id = topicRec.chapter_id;
+        if (!q.subject_id && !q.subject && topicRec.subject_id) subject_id = topicRec.subject_id as any;
+        if (!q.paper && topicRec.paper) paper = topicRec.paper as '1st' | '2nd';
+      }
+    }
+
+    let optionsObj: { A: string; B: string; C: string; D: string; [key: string]: string } = {
+      A: '',
+      B: '',
+      C: '',
+      D: '',
+    };
+    if (Array.isArray(q.options)) {
+      for (const opt of q.options) {
+        if (opt) {
+          const key = opt.id || opt.label || 'A';
+          optionsObj[key] = opt.text ?? opt.value ?? '';
+        }
+      }
+    } else if (q.options && typeof q.options === 'object') {
+      optionsObj = { ...optionsObj, ...q.options };
+    }
+
+    let tagsArr: string[] = [];
+    if (Array.isArray(q.tags)) {
+      tagsArr = q.tags.map((t: any) => String(t));
+    } else if (typeof q.tags === 'string' && q.tags.trim()) {
+      tagsArr = q.tags.split(',').map((t) => t.trim()).filter(Boolean);
+    }
+    if (q.university && !tagsArr.includes(q.university)) tagsArr.push(q.university);
+    if (q.year && !tagsArr.includes(q.year)) tagsArr.push(q.year);
+
+    const id = q.id || `q_${subject_id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+    const newQ: Question = {
+      id,
+      subject_id: subject_id as any,
+      subject_name,
+      paper,
+      chapter_id: chapter_id as any,
+      chapter_name,
+      topic_id,
+      topic_name,
+      category: q.category || 'varsity_a',
+      question_text: (q.question_text || q.questionText || '').trim(),
+      math_formula_latex: q.math_formula_latex || null,
+      options: optionsObj,
+      correct_ans: (q.correct_ans || q.correctAnswer || 'A').trim().toUpperCase(),
+      explanation: q.explanation || '',
+      explanation_latex: q.explanation_latex || null,
+      question_image_url: q.question_image_url || null,
+      explanation_image_url: q.explanation_image_url || null,
+      tags: tagsArr,
+      star_rating: (Math.min(3, Math.max(1, Number(q.star_rating) || 3)) as 1 | 2 | 3),
+      type: q.type || q.questionType || 'mcq',
+      difficulty: q.difficulty || 'medium',
+    };
+
+    normalizedQuestions.push(newQ);
+  }
+
+  // PostgreSQL Transaction
+  const activePool = getPgPool();
+  if (isPostgresActive() && activePool) {
+    const client = await activePool.connect();
+    try {
+      await client.query('BEGIN');
+      const upsertSql = `INSERT INTO questions (
+        id, subject_id, subject_name, paper, chapter_id, chapter_name,
+        topic_id, topic_name, category, question_text, math_formula_latex,
+        options, correct_ans, explanation, explanation_latex,
+        question_image_url, explanation_image_url,
+        tags, star_rating, type, difficulty, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+      ON CONFLICT (id) DO UPDATE SET
+        subject_id = EXCLUDED.subject_id,
+        subject_name = EXCLUDED.subject_name,
+        paper = EXCLUDED.paper,
+        chapter_id = EXCLUDED.chapter_id,
+        chapter_name = EXCLUDED.chapter_name,
+        topic_id = EXCLUDED.topic_id,
+        topic_name = EXCLUDED.topic_name,
+        category = EXCLUDED.category,
+        question_text = EXCLUDED.question_text,
+        math_formula_latex = EXCLUDED.math_formula_latex,
+        options = EXCLUDED.options,
+        correct_ans = EXCLUDED.correct_ans,
+        explanation = EXCLUDED.explanation,
+        explanation_latex = EXCLUDED.explanation_latex,
+        question_image_url = EXCLUDED.question_image_url,
+        explanation_image_url = EXCLUDED.explanation_image_url,
+        tags = EXCLUDED.tags,
+        star_rating = EXCLUDED.star_rating,
+        type = EXCLUDED.type,
+        difficulty = EXCLUDED.difficulty;`;
+
+      for (const item of normalizedQuestions) {
+        await client.query(upsertSql, [
+          item.id,
+          item.subject_id,
+          item.subject_name,
+          item.paper,
+          item.chapter_id,
+          item.chapter_name,
+          item.topic_id || null,
+          item.topic_name || null,
+          item.category,
+          item.question_text,
+          item.math_formula_latex || null,
+          JSON.stringify(item.options),
+          item.correct_ans,
+          item.explanation,
+          item.explanation_latex || null,
+          item.question_image_url || null,
+          item.explanation_image_url || null,
+          JSON.stringify(item.tags),
+          item.star_rating,
+          item.type,
+          item.difficulty,
+          Date.now(),
+        ]);
+      }
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Update in-memory fallback store
+  for (const item of normalizedQuestions) {
+    memoryStore.questions.set(item.id, item);
+  }
+
+  return { count: normalizedQuestions.length, questions: normalizedQuestions };
 }
 
 // ---------------- USER & AUTH DATABASE OPERATIONS ----------------

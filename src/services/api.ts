@@ -672,6 +672,33 @@ export async function deleteQuestion(id: string): Promise<boolean> {
   return true;
 }
 
+export interface BulkImportResponse {
+  success: boolean;
+  count: number;
+  message: string;
+  error?: string;
+  details?: Array<{ path: string; message: string }>;
+}
+
+export async function bulkImportQuestionsApi(questionsData: any): Promise<BulkImportResponse> {
+  const response = await fetch('/api/admin/questions/bulk-import', {
+    method: 'POST',
+    headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(questionsData),
+  });
+
+  const resData = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const errorObj: any = new Error(resData.error || 'Failed to bulk import questions');
+    errorObj.details = resData.details;
+    errorObj.status = response.status;
+    throw errorObj;
+  }
+
+  return resData;
+}
+
 // ---------------- SQLite Topic API Operations ----------------
 
 export async function fetchTopics(filters?: {

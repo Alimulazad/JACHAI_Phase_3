@@ -42,6 +42,7 @@ import {
   batchApproveDrafts,
   batchRejectDrafts,
   getAdminDatabaseStats,
+  bulkImportQuestions,
   getDatabase,
   getDatabaseConnectionInfo,
   isPostgresActive,
@@ -57,6 +58,7 @@ import {
   adminApiKeySaveSchema,
   adminApiKeyTestSchema,
   draftCreateSchema,
+  bulkQuestionsImportSchema,
 } from './server/validation/schemas.js';
 
 dotenv.config();
@@ -1338,6 +1340,43 @@ app.delete('/api/questions/:id', authenticateAdmin, async (req: Request, res: Re
     return res.status(500).json({ error: 'Failed to delete question', details: error.message });
   }
 });
+
+// POST /api/admin/questions/bulk-import (Bulk import questions with Zod validation - Protected Admin)
+app.post(
+  '/api/admin/questions/bulk-import',
+  authenticateAdmin,
+  validateBody(bulkQuestionsImportSchema),
+  async (req: Request, res: Response) => {
+    try {
+      let rawQuestions: any[] = [];
+      if (Array.isArray(req.body)) {
+        rawQuestions = req.body;
+      } else if (req.body && Array.isArray(req.body.questions)) {
+        rawQuestions = req.body.questions;
+      } else if (req.body && Array.isArray(req.body.data)) {
+        rawQuestions = req.body.data;
+      }
+
+      if (!rawQuestions || rawQuestions.length === 0) {
+        return res.status(400).json({ error: 'No questions found in payload' });
+      }
+
+      const result = await bulkImportQuestions(rawQuestions);
+
+      return res.status(200).json({
+        success: true,
+        count: result.count,
+        message: `Successfully imported ${result.count} questions into the live database.`,
+      });
+    } catch (error: any) {
+      console.error('Error in bulk import questions:', error);
+      return res.status(500).json({
+        error: 'Database bulk import failed',
+        details: error.message || 'An unexpected error occurred while saving questions to the database.',
+      });
+    }
+  }
+);
 
 // POST /api/reports (Submit question bug or error report)
 app.post('/api/reports', async (req: Request, res: Response) => {

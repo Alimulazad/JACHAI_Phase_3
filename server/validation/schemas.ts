@@ -6,10 +6,19 @@ export function validateBody<T extends z.ZodTypeAny>(schema: T) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      const formattedErrors = result.error.issues.map((err) => ({
-        path: err.path.join('.'),
-        message: err.message,
-      }));
+      const formattedErrors = result.error.issues.map((err) => {
+        const pathStr = err.path.join('.');
+        let rowInfo = '';
+        if (typeof err.path[0] === 'number') {
+          rowInfo = `Row ${err.path[0] + 1} (Item index ${err.path[0]}): `;
+        } else if ((err.path[0] === 'questions' || err.path[0] === 'data') && typeof err.path[1] === 'number') {
+          rowInfo = `Row ${err.path[1] + 1} (Item index ${err.path[1]}): `;
+        }
+        return {
+          path: pathStr,
+          message: `${rowInfo}${err.message}`,
+        };
+      });
       return res.status(400).json({
         error: 'Validation failed',
         details: formattedErrors,
@@ -71,6 +80,70 @@ export const questionCreateUpdateSchema = z.object({
 export const batchQuestionsCreateSchema = z.object({
   questions: z.array(questionCreateUpdateSchema).min(1, 'At least 1 question is required'),
 });
+
+export const bulkQuestionItemSchema = z
+  .object({
+    id: z.string().optional(),
+    subject_id: z.string().optional(),
+    subject: z.string().optional(),
+    subject_name: z.string().optional(),
+    paper: z.union([z.number(), z.string()]).optional(),
+    chapter_id: z.string().optional(),
+    chapterId: z.string().optional(),
+    chapter_name: z.string().optional(),
+    topic_id: z.string().optional(),
+    topic_name: z.string().optional(),
+    topic: z.string().optional(),
+    category: z.string().optional(),
+    question_text: z.string().optional(),
+    questionText: z.string().optional(),
+    math_formula_latex: z.string().nullable().optional(),
+    options: z.union([
+      z.record(z.string(), z.any()),
+      z.array(
+        z.object({
+          id: z.string(),
+          text: z.string().optional().default(''),
+          label: z.string().optional(),
+        })
+      ),
+    ]),
+    correct_ans: z.string().optional(),
+    correctAnswer: z.string().optional(),
+    explanation: z.string().optional(),
+    explanation_latex: z.string().nullable().optional(),
+    question_image_url: z.string().nullable().optional(),
+    explanation_image_url: z.string().nullable().optional(),
+    tags: z.union([z.array(z.string()), z.string()]).optional(),
+    star_rating: z.union([z.number(), z.string()]).optional(),
+    type: z.enum(['mcq', 'written']).optional(),
+    questionType: z.enum(['mcq', 'written']).optional(),
+    difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+    university: z.string().optional(),
+    year: z.string().optional(),
+  })
+  .refine(
+    (data) => Boolean((data.question_text && data.question_text.trim()) || (data.questionText && data.questionText.trim())),
+    { message: 'Question text is required (question_text or questionText)', path: ['question_text'] }
+  )
+  .refine(
+    (data) => Boolean((data.correct_ans && data.correct_ans.trim()) || (data.correctAnswer && data.correctAnswer.trim())),
+    { message: 'Correct answer is required (correct_ans or correctAnswer)', path: ['correct_ans'] }
+  )
+  .refine(
+    (data) => Boolean((data.subject_id && data.subject_id.trim()) || (data.subject && data.subject.trim())),
+    { message: 'Subject is required (subject_id or subject)', path: ['subject_id'] }
+  );
+
+export const bulkQuestionsImportSchema = z.union([
+  z.array(bulkQuestionItemSchema).min(1, 'JSON array must contain at least 1 question'),
+  z.object({
+    questions: z.array(bulkQuestionItemSchema).min(1, 'Questions array must contain at least 1 question'),
+  }),
+  z.object({
+    data: z.array(bulkQuestionItemSchema).min(1, 'Data array must contain at least 1 question'),
+  }),
+]);
 
 export const draftCreateSchema = z.object({
   source: z.string().optional().default('manual'),

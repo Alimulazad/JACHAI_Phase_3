@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Database,
   Plus,
@@ -12,11 +12,16 @@ import {
   Filter,
   CheckCircle2,
   AlertCircle,
+  Upload,
+  X,
+  FileJson,
 } from 'lucide-react';
 import { Question, QuestionSubject } from '../../types';
 import { SUBJECTS_DATA } from '../../data/admissionData';
 import MathText from '../MathText';
 import { AdminQuestionEditModal } from './AdminQuestionEditModal';
+import { bulkImportQuestionsApi } from '../../services/api';
+import { validateStrictJsonFormat } from '../../utils/jsonValidator';
 
 interface AdminQuestionsTabProps {
   questions: Question[];
@@ -59,6 +64,77 @@ export const AdminQuestionsTab: React.FC<AdminQuestionsTabProps> = ({
   });
 
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [errorModalData, setErrorModalData] = useState<{
+    title: string;
+    message: string;
+    details?: Array<{ path: string; message: string }>;
+  } | null>(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const content = event.target?.result as string;
+
+        // Perform strict JSON format validation against standard JSON rules
+        const validationResult = validateStrictJsonFormat(content);
+        if (!validationResult.valid) {
+          setErrorModalData({
+            title: 'JSON ফরম্যাট ভ্যালিডেশন ত্রুটি (Strict JSON Format Error)',
+            message: 'আপলোডকৃত JSON ফাইলে সঠিক ফরম্যাটিং নিয়ম ভঙ্গ হয়েছে। নিচের ত্রুটিগুলোর সমাধান করুন:',
+            details: validationResult.errors,
+          });
+          return;
+        }
+
+        const parsedData = validationResult.parsedData;
+
+        setIsImporting(true);
+        setErrorModalData(null);
+
+        const res = await bulkImportQuestionsApi(parsedData);
+
+        setNotification({
+          text: `সফলভাবে ${res.count} টি প্রশ্ন ইমপোর্ট বা আপডেট করা হয়েছে!`,
+          type: 'success',
+        });
+        setTimeout(() => setNotification(null), 5000);
+        onRefresh();
+      } catch (err: any) {
+        if (err.details && Array.isArray(err.details)) {
+          setErrorModalData({
+            title: 'JSON ভ্যালিডেশন ত্রুটি (Zod Validation Failed)',
+            message: err.message || 'আপলোডকৃত JSON ডেটায় তথ্যের ঘাটতি বা ভুল ফরম্যাট রয়েছে।',
+            details: err.details,
+          });
+        } else {
+          setErrorModalData({
+            title: 'ইমপোর্ট ব্যর্থ হয়েছে',
+            message: err.message || 'ডেটাবেজে প্রশ্ন সংরক্ষণে একটি অপ্রত্যাশিত সমস্যা দেখা দিয়েছে।',
+          });
+        }
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+
+    reader.onerror = () => {
+      setErrorModalData({
+        title: 'ফাইল রিড ত্রুটি',
+        message: 'JSON ফাইলটি পড়া সম্ভব হয়নি। অনুগ্রহ করে আবার চেষ্টা করুন।',
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    reader.readAsText(file);
+  };
 
   // Filtered Questions
   const filteredQuestions = questions.filter((q) => {
@@ -146,11 +222,29 @@ export const AdminQuestionsTab: React.FC<AdminQuestionsTabProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept=".json,application/json"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting || isLoading}
+            className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Upload className={`w-3.5 h-3.5 ${isImporting ? 'animate-bounce' : ''}`} />
+            {isImporting ? 'ইমপোর্ট হচ্ছে...' : 'Bulk Import JSON'}
+          </button>
+
           <button
             type="button"
             onClick={onRefresh}
-            disabled={isLoading}
+            disabled={isLoading || isImporting}
             className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -160,7 +254,8 @@ export const AdminQuestionsTab: React.FC<AdminQuestionsTabProps> = ({
           <button
             type="button"
             onClick={handleOpenAdd}
-            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+            disabled={isImporting}
+            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
           >
             <Plus className="w-3.5 h-3.5" />
             নতুন প্রশ্ন যুক্ত করুন
@@ -399,6 +494,60 @@ export const AdminQuestionsTab: React.FC<AdminQuestionsTabProps> = ({
           onClose={() => setModalState({ isOpen: false, question: null, isNew: false })}
           onSave={handleSaveModal}
         />
+      )}
+
+      {/* Bulk Import Validation / DB Error Modal */}
+      {errorModalData && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="p-5 bg-red-50 border-b border-red-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5 text-red-800">
+                <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+                <h3 className="text-sm font-bold">{errorModalData.title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorModalData(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 overflow-y-auto space-y-4 text-xs text-slate-700">
+              <p className="font-semibold text-slate-900 leading-relaxed">{errorModalData.message}</p>
+
+              {errorModalData.details && errorModalData.details.length > 0 && (
+                <div className="space-y-2">
+                  <p className="font-bold text-slate-800 text-[11px] uppercase tracking-wider">
+                    বিস্তারিত ত্রুটির তালিকা ({errorModalData.details.length} টি সমস্যা পাওয়া গেছে):
+                  </p>
+                  <div className="bg-slate-900 text-red-400 font-mono text-[11px] p-3.5 rounded-xl max-h-64 overflow-y-auto space-y-2">
+                    {errorModalData.details.map((item, idx) => (
+                      <div key={idx} className="flex gap-2 border-b border-slate-800 pb-1.5 last:border-0">
+                        <span className="text-slate-500 shrink-0 font-bold">#{idx + 1}</span>
+                        <div>
+                          <span className="text-amber-400 font-semibold">{item.path}: </span>
+                          <span className="text-slate-200">{item.message}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setErrorModalData(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold cursor-pointer"
+              >
+                বন্ধ করুন
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

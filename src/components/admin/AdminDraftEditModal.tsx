@@ -166,7 +166,7 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
                       <select
                         value={formData.subject_id || 'physics_1'}
                         onChange={(e) => setFormData({ ...formData, subject_id: e.target.value })}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white outline-none"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 focus:bg-white outline-none"
                       >
                         {SUBJECTS_DATA.map((s) => (
                           <option key={s.id} value={s.id}>
@@ -181,7 +181,7 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
                       <select
                         value={formData.category || 'varsity_a'}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white outline-none"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 focus:bg-white outline-none"
                       >
                         <option value="varsity_a">Varsity 'Ka' (ঢাবি 'ক' ইউনিট)</option>
                         <option value="engineering">Engineering (বুয়েট/রুয়েট/চুয়েট)</option>
@@ -200,7 +200,7 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
                       rows={3}
                       value={formData.question_text || ''}
                       onChange={(e) => setFormData({ ...formData, question_text: e.target.value })}
-                      className="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white outline-none font-sans leading-relaxed"
+                      className="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 focus:bg-white outline-none font-sans leading-relaxed"
                     />
                   </div>
 
@@ -223,7 +223,7 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
                               },
                             })
                           }
-                          className={`w-full p-2.5 rounded-xl border ${
+                          className={`w-full p-2.5 rounded-xl border text-slate-900 ${
                             formData.correct_ans === optKey
                               ? 'border-emerald-500 bg-emerald-50/50 ring-1 ring-emerald-400 font-semibold'
                               : 'border-slate-300 bg-slate-50 focus:bg-white'
@@ -254,7 +254,7 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
                       <select
                         value={formData.difficulty || 'medium'}
                         onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white outline-none"
+                        className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 focus:bg-white outline-none"
                       >
                         <option value="easy">সহজ (Easy)</option>
                         <option value="medium">মাঝারি (Medium)</option>
@@ -272,7 +272,7 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
                       rows={3}
                       value={formData.explanation || ''}
                       onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
-                      className="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white outline-none leading-relaxed"
+                      className="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 focus:bg-white outline-none leading-relaxed"
                     />
                   </div>
                 </>
@@ -286,7 +286,7 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
                       type="text"
                       value={formData.bangla_name || ''}
                       onChange={(e) => setFormData({ ...formData, bangla_name: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white outline-none"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 focus:bg-white outline-none"
                     />
                   </div>
                   <div>
@@ -295,7 +295,7 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
                       type="text"
                       value={formData.name || ''}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white outline-none"
+                      className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 focus:bg-white outline-none"
                     />
                   </div>
                 </div>
@@ -309,7 +309,7 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
                       rows={4}
                       value={formData.content_bn || ''}
                       onChange={(e) => setFormData({ ...formData, content_bn: e.target.value })}
-                      className="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 focus:bg-white outline-none"
+                      className="w-full p-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 focus:bg-white outline-none"
                     />
                   </div>
                 </div>

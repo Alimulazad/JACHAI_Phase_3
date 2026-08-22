@@ -164,7 +164,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
               <select
                 value={formData.subject_id || 'physics_1'}
                 onChange={(e) => handleSubjectChange(e.target.value as QuestionSubject)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
               >
                 {SUBJECTS_DATA.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -179,7 +179,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
               <select
                 value={formData.chapter_id || ''}
                 onChange={(e) => handleChapterChange(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
               >
                 {availableChapters.map((ch) => (
                   <option key={ch.id} value={ch.id}>
@@ -201,7 +201,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
               rows={3}
               required
               placeholder="প্রশ্ন এখানে লিখুন..."
-              className="w-full p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-mono"
+              className="w-full p-3 rounded-xl border border-slate-200 text-sm text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-mono"
             />
             {formData.question_text && (
               <div className="mt-1.5 p-2.5 bg-slate-50 rounded-lg text-xs text-slate-800 border border-slate-200">
@@ -253,7 +253,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
                     setQuestionImageFile(null);
                   }}
                   placeholder="বা ছবির সরাসরি URL পেস্ট করুন..."
-                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-mono"
+                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-mono"
                 />
                 <LinkIcon className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               </div>
@@ -302,7 +302,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
                   }
                   required
                   placeholder={`অপশন ${opt}`}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
                 />
               </div>
             ))}
@@ -315,7 +315,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
               <select
                 value={formData.correct_ans || 'A'}
                 onChange={(e) => setFormData({ ...formData, correct_ans: e.target.value as any })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
               >
                 <option value="A">অপশন A (ক)</option>
                 <option value="B">অপশন B (খ)</option>
@@ -329,7 +329,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
               <select
                 value={formData.category || 'varsity_a'}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
               >
                 <option value="varsity_a">ভার্সিটি 'ক' (Varsity A)</option>
                 <option value="engineering">ইঞ্জিনিয়ারিং (BUET / CKET)</option>
@@ -344,7 +344,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
               <select
                 value={formData.star_rating || 3}
                 onChange={(e) => setFormData({ ...formData, star_rating: parseInt(e.target.value, 10) as 1 | 2 | 3 })}
-                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 bg-white"
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
               >
                 <option value={3}>⭐⭐⭐ ৩ স্টার</option>
                 <option value={2}>⭐⭐ ২ স্টার</option>
@@ -363,7 +363,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
               onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
               rows={3}
               placeholder="প্রশ্নের বিস্তারিত সমাধান..."
-              className="w-full p-3 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+              className="w-full p-3 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
             />
           </div>
 
@@ -409,7 +409,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
                     setExplanationImageFile(null);
                   }}
                   placeholder="বা ব্যাখ্যার ছবির URL পেস্ট করুন..."
-                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-mono"
+                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 font-mono"
                 />
                 <LinkIcon className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
               </div>
@@ -443,7 +443,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
               value={tagsString}
               onChange={(e) => setTagsString(e.target.value)}
               placeholder="DU Ka 24-25, BUET 22-23"
-              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
             />
           </div>
 
