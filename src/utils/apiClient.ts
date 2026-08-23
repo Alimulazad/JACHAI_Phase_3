@@ -29,6 +29,11 @@ const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
 export function isTransientError(error: any): boolean {
   if (!error) return false;
 
+  // Intentional aborts by caller or component unmount should NEVER be retried
+  if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+    return false;
+  }
+
   // Network failures / DNS errors / CORS drops / Browser offline
   if (error instanceof TypeError && error.message) {
     const msg = error.message.toLowerCase();
@@ -36,15 +41,14 @@ export function isTransientError(error: any): boolean {
       msg.includes('fetch') ||
       msg.includes('network') ||
       msg.includes('failed to fetch') ||
-      msg.includes('load failed') ||
-      msg.includes('abort')
+      msg.includes('load failed')
     ) {
       return true;
     }
   }
 
-  // DOMException Abort / Timeout
-  if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+  // DOMException Timeout Error
+  if (error.name === 'TimeoutError' || error.message?.includes('timed out')) {
     return true;
   }
 
@@ -82,6 +86,11 @@ export async function fetchWithRetry(
     ...customConfig,
   };
 
+  // If already aborted before even starting, reject cleanly
+  if (init?.signal?.aborted) {
+    throw new DOMException('Request was aborted prior to execution', 'AbortError');
+  }
+
   let lastError: any = null;
 
   for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
@@ -91,14 +100,29 @@ export async function fetchWithRetry(
 
     if (config.timeoutMs > 0) {
       timeoutId = setTimeout(() => {
-        controller.abort();
+        try {
+          controller.abort(new DOMException(`Request timed out after ${config.timeoutMs}ms`, 'TimeoutError'));
+        } catch {
+          controller.abort();
+        }
       }, config.timeoutMs);
     }
 
     // Merge external signal if passed
-    let mergedSignal = controller.signal;
+    const onExternalAbort = () => {
+      try {
+        controller.abort(init?.signal?.reason || new DOMException('Operation aborted', 'AbortError'));
+      } catch {
+        controller.abort();
+      }
+    };
+
     if (init?.signal) {
-      init.signal.addEventListener('abort', () => controller.abort());
+      if (init.signal.aborted) {
+        onExternalAbort();
+      } else {
+        init.signal.addEventListener('abort', onExternalAbort, { once: true });
+      }
     }
 
     try {
@@ -111,10 +135,13 @@ export async function fetchWithRetry(
       const response = await fetch(input, {
         ...init,
         headers,
-        signal: mergedSignal,
+        signal: controller.signal,
       });
 
       if (timeoutId) clearTimeout(timeoutId);
+      if (init?.signal) {
+        init.signal.removeEventListener('abort', onExternalAbort);
+      }
 
       // If response is OK or a client error not in retry status codes (e.g. 400, 401, 403, 404), return it immediately
       if (response.ok || !config.retryOnStatusCodes.includes(response.status)) {
@@ -147,7 +174,15 @@ export async function fetchWithRetry(
       return response;
     } catch (err: any) {
       if (timeoutId) clearTimeout(timeoutId);
+      if (init?.signal) {
+        init.signal.removeEventListener('abort', onExternalAbort);
+      }
       lastError = err;
+
+      // If intentionally aborted, do not retry
+      if (init?.signal?.aborted || err.name === 'AbortError') {
+        throw err;
+      }
 
       if (attempt < config.maxRetries && isTransientError(err)) {
         const delay = calculateDelay(

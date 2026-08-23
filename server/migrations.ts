@@ -145,6 +145,19 @@ export const migrations: Migration[] = [
       `);
     },
   },
+  {
+    id: '003_add_active_users_tracking',
+    name: 'Add last_active_at, last_ip, last_device, and current_page tracking to users table',
+    up: async (client: pg.PoolClient) => {
+      await client.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at BIGINT;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS last_ip VARCHAR(100);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS last_device VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS current_page VARCHAR(100);
+        CREATE INDEX IF NOT EXISTS idx_users_last_active ON users (last_active_at);
+      `);
+    },
+  },
 ];
 
 export async function runMigrations(pool: pg.Pool): Promise<void> {

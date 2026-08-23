@@ -102,29 +102,29 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({ child
     let isMounted = true;
 
     async function initialProbe() {
-      if (!navigator.onLine) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
         if (isMounted) {
           setIsOnline(false);
           setOfflineSince(new Date());
-          setInitialConnectionFailed(true);
           setInitialCheckDone(true);
         }
         return;
       }
 
-      // Check if server is actually answering
-      const serverReachable = await probeServerHealth(getApiBaseUrl());
       if (isMounted) {
-        if (!serverReachable && !isOfflineMode) {
-          // If server fails on startup and user hasn't chosen offline mode, flag initial failure
-          setInitialConnectionFailed(true);
-          setIsOnline(false);
-          setOfflineSince(new Date());
-        } else {
+        setIsOnline(true);
+        setInitialCheckDone(true);
+      }
+
+      // Check if server is actually answering in background
+      try {
+        const serverReachable = await probeServerHealth(getApiBaseUrl());
+        if (isMounted && serverReachable) {
           setIsOnline(true);
           setInitialConnectionFailed(false);
         }
-        setInitialCheckDone(true);
+      } catch {
+        // Silently continue without blocking
       }
     }
 

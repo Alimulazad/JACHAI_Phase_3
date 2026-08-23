@@ -108,7 +108,9 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
 
   // Fetch models on mount
   useEffect(() => {
+    let isMounted = true;
     fetchAIModelsApi().then((res) => {
+      if (!isMounted) return;
       if (res.models && res.models.length > 0) {
         setAvailableModels(res.models);
       }
@@ -116,12 +118,17 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
         setServerConfig(res.serverConfig);
       }
     });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Fetch persistent chat history from SQLite when opened
   useEffect(() => {
+    let isMounted = true;
     if (isOpen) {
       fetchChatHistoryApi().then((history) => {
+        if (!isMounted) return;
         if (history && history.length > 0) {
           setMessages(history);
         } else {
@@ -129,6 +136,9 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
         }
       });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen]);
 
   // Auto scroll to bottom

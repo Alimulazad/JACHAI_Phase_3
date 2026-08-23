@@ -1338,6 +1338,10 @@ export interface UserRecord {
   avatar: string;
   avatar_color: string;
   created_at: number;
+  last_active_at?: number;
+  last_ip?: string;
+  last_device?: string;
+  current_page?: string;
 }
 
 export async function getUserByPhone(phone: string): Promise<UserRecord | null> {
@@ -2027,5 +2031,240 @@ export async function getAdminDatabaseStats(): Promise<any> {
     rejectedDrafts,
     dbFileSize,
     status: isPgConnected ? 'postgresql_online' : 'ready',
+  };
+}
+
+// ---------------- REAL-TIME ACTIVE USERS TELEMETRY ----------------
+
+export interface ActiveUserSession {
+  sessionId: string;
+  userId?: string;
+  name: string;
+  phone?: string;
+  avatar?: string;
+  avatarColor?: string;
+  targetUniversity?: string;
+  targetUnit?: string;
+  college?: string;
+  device?: string;
+  browser?: string;
+  ip?: string;
+  currentPage: string;
+  firstSeenAt: number;
+  lastActiveAt: number;
+  requestCount: number;
+  isGuest: boolean;
+}
+
+// In-memory real-time active sessions store
+const activeSessionsStore = new Map<string, ActiveUserSession>();
+
+export async function recordUserActivityInDb(data: {
+  userId?: string;
+  customSessionId?: string;
+  ip?: string;
+  userAgent?: string;
+  currentPage?: string;
+  targetUniversity?: string;
+  deviceInfo?: string;
+}): Promise<void> {
+  const now = Date.now();
+  const sessionId = data.userId ? `user_${data.userId}` : (data.customSessionId || `guest_${data.ip || 'anon'}`);
+  
+  // Clean up user agent to friendly device/browser name
+  let device = data.deviceInfo || 'Web Browser';
+  let browser = 'Chrome/Safari';
+  if (data.userAgent) {
+    const ua = data.userAgent;
+    if (ua.includes('Android')) device = 'Android Phone';
+    else if (ua.includes('iPhone')) device = 'iPhone';
+    else if (ua.includes('iPad')) device = 'iPad Tablet';
+    else if (ua.includes('Macintosh')) device = 'macOS Desktop';
+    else if (ua.includes('Windows')) device = 'Windows PC';
+    else if (ua.includes('Linux')) device = 'Linux Machine';
+
+    if (ua.includes('Edg/')) browser = 'Microsoft Edge';
+    else if (ua.includes('Chrome/')) browser = 'Google Chrome';
+    else if (ua.includes('Safari/') && !ua.includes('Chrome')) browser = 'Apple Safari';
+    else if (ua.includes('Firefox/')) browser = 'Mozilla Firefox';
+  }
+
+  let existing = activeSessionsStore.get(sessionId);
+
+  // If registered user, retrieve name and avatar
+  let userName = 'অতিথি শিক্ষার্থী';
+  let userPhone = undefined;
+  let userAvatar = '🧑‍🎓';
+  let userAvatarColor = '#2563eb';
+  let userTargetUni = data.targetUniversity || 'du_a';
+  let userTargetUnit = "'ক' ইউনিট";
+  let userCollege = 'কলেজ শিক্ষার্থী';
+
+  if (data.userId) {
+    const user = await getUserById(data.userId);
+    if (user) {
+      userName = user.name;
+      userPhone = user.phone;
+      userAvatar = user.avatar || '🧑‍🎓';
+      userAvatarColor = user.avatar_color || '#2563eb';
+      userTargetUni = user.target_university || 'du_a';
+      userTargetUnit = user.target_unit || "'ক' ইউনিট";
+      userCollege = user.college || 'কলেজ শিক্ষার্থী';
+
+      // Update in memory user
+      user.last_active_at = now;
+      if (data.ip) user.last_ip = data.ip;
+      if (device) user.last_device = device;
+      if (data.currentPage) user.current_page = data.currentPage;
+      memoryStore.users.set(user.id, user);
+
+      // Async write to PG
+      query(
+        `UPDATE users SET
+          last_active_at = $1,
+          last_ip = COALESCE($2, last_ip),
+          last_device = COALESCE($3, last_device),
+          current_page = COALESCE($4, current_page)
+        WHERE id = $5`,
+        [now, data.ip || null, device || null, data.currentPage || null, user.id]
+      ).catch(() => {});
+    }
+  }
+
+  if (existing) {
+    existing.lastActiveAt = now;
+    existing.requestCount += 1;
+    if (data.currentPage) existing.currentPage = data.currentPage;
+    if (data.ip) existing.ip = data.ip;
+    if (data.userId) {
+      existing.userId = data.userId;
+      existing.name = userName;
+      existing.phone = userPhone;
+      existing.avatar = userAvatar;
+      existing.avatarColor = userAvatarColor;
+      existing.targetUniversity = userTargetUni;
+      existing.targetUnit = userTargetUnit;
+      existing.college = userCollege;
+      existing.isGuest = false;
+    }
+    activeSessionsStore.set(sessionId, existing);
+  } else {
+    const newSession: ActiveUserSession = {
+      sessionId,
+      userId: data.userId,
+      name: userName,
+      phone: userPhone,
+      avatar: userAvatar,
+      avatarColor: userAvatarColor,
+      targetUniversity: userTargetUni,
+      targetUnit: userTargetUnit,
+      college: userCollege,
+      device,
+      browser,
+      ip: data.ip,
+      currentPage: data.currentPage || 'হোমপেজ',
+      firstSeenAt: now,
+      lastActiveAt: now,
+      requestCount: 1,
+      isGuest: !data.userId,
+    };
+    activeSessionsStore.set(sessionId, newSession);
+  }
+
+  // Purge sessions older than 24 hours to prevent memory bloat
+  const expiryCutoff = now - 24 * 60 * 60 * 1000;
+  for (const [key, session] of activeSessionsStore.entries()) {
+    if (session.lastActiveAt < expiryCutoff) {
+      activeSessionsStore.delete(key);
+    }
+  }
+}
+
+export async function getActiveUsersTelemetryFromDb(): Promise<{
+  success: boolean;
+  totalActiveNow: number;
+  totalActiveToday: number;
+  totalRegisteredActive: number;
+  totalGuestsActive: number;
+  activeUsers: Array<{
+    sessionId: string;
+    userId?: string;
+    name: string;
+    phone?: string;
+    avatar?: string;
+    avatarColor?: string;
+    targetUniversity?: string;
+    targetUnit?: string;
+    college?: string;
+    device?: string;
+    browser?: string;
+    ip?: string;
+    currentPage: string;
+    firstSeenAt: number;
+    lastActiveAt: number;
+    requestCount: number;
+    isGuest: boolean;
+    status: 'online' | 'idle' | 'offline';
+  }>;
+  universityBreakdown: Record<string, number>;
+  pageBreakdown: Record<string, number>;
+  lastUpdated: number;
+}> {
+  const now = Date.now();
+  const onlineThresholdMs = 2 * 60 * 1000; // < 2 minutes = online
+  const idleThresholdMs = 6 * 60 * 1000;   // 2 to 6 minutes = idle
+  const todayCutoff = now - 24 * 60 * 60 * 1000;
+
+  const sessionList = Array.from(activeSessionsStore.values());
+  const universityBreakdown: Record<string, number> = {};
+  const pageBreakdown: Record<string, number> = {};
+
+  let totalActiveNow = 0;
+  let totalActiveToday = 0;
+  let totalRegisteredActive = 0;
+  let totalGuestsActive = 0;
+
+  const activeUsers = sessionList
+    .filter((s) => s.lastActiveAt >= todayCutoff)
+    .map((s) => {
+      const diff = now - s.lastActiveAt;
+      let status: 'online' | 'idle' | 'offline' = 'offline';
+      if (diff <= onlineThresholdMs) {
+        status = 'online';
+        totalActiveNow++;
+      } else if (diff <= idleThresholdMs) {
+        status = 'idle';
+      }
+
+      totalActiveToday++;
+      if (s.isGuest) {
+        totalGuestsActive++;
+      } else {
+        totalRegisteredActive++;
+      }
+
+      const uni = s.targetUniversity || 'general';
+      universityBreakdown[uni] = (universityBreakdown[uni] || 0) + 1;
+
+      const page = s.currentPage || 'হোমপেজ';
+      pageBreakdown[page] = (pageBreakdown[page] || 0) + 1;
+
+      return {
+        ...s,
+        status,
+      };
+    })
+    .sort((a, b) => b.lastActiveAt - a.lastActiveAt);
+
+  return {
+    success: true,
+    totalActiveNow,
+    totalActiveToday,
+    totalRegisteredActive,
+    totalGuestsActive,
+    activeUsers,
+    universityBreakdown,
+    pageBreakdown,
+    lastUpdated: now,
   };
 }

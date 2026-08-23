@@ -38,7 +38,7 @@ export const AdminSystemHealthWidget: React.FC<AdminSystemHealthWidgetProps> = (
   const [healthData, setHealthData] = useState<OpenRouterSystemHealthResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isPolling, setIsPolling] = useState<boolean>(true);
-  const [pollIntervalSec, setPollIntervalSec] = useState<number>(10);
+  const [pollIntervalSec, setPollIntervalSec] = useState<number>(120);
   const [latencyHistory, setLatencyHistory] = useState<LatencyHistoryPoint[]>([]);
   const [lastPollTime, setLastPollTime] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -261,10 +261,12 @@ export const AdminSystemHealthWidget: React.FC<AdminSystemHealthWidgetProps> = (
               disabled={!isPolling}
               className="bg-transparent text-slate-200 font-medium text-xs focus:outline-none cursor-pointer pr-2 py-0.5 disabled:opacity-50"
             >
-              <option value={5} className="bg-slate-900 text-slate-200">৫ সে.</option>
-              <option value={10} className="bg-slate-900 text-slate-200">১০ সে.</option>
-              <option value={30} className="bg-slate-900 text-slate-200">৩০ সে.</option>
-              <option value={60} className="bg-slate-900 text-slate-200">৬০ সে.</option>
+              <option value={60} className="bg-slate-900 text-slate-200">১ মিনিট (60s)</option>
+              <option value={120} className="bg-slate-900 text-slate-200">২ মিনিট (120s)</option>
+              <option value={300} className="bg-slate-900 text-slate-200">৫ মিনিট (300s)</option>
+              <option value={600} className="bg-slate-900 text-slate-200">১০ মিনিট (600s)</option>
+              <option value={1200} className="bg-slate-900 text-slate-200">২০ মিনিট (1200s)</option>
+              <option value={1800} className="bg-slate-900 text-slate-200">৩০ মিনিট (1800s)</option>
             </select>
           </div>
 

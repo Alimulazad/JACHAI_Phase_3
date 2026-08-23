@@ -1,4 +1,4 @@
-import { Question, UserProgress, ChatMessage, User, AuthResponse, AIModelOption, KnowledgeSnippet, TopicRecord, AdminDraftItem, AdminApiKeyConfig, AdminSystemStats, OpenRouterSystemHealthResponse } from '../types';
+import { Question, UserProgress, ChatMessage, User, AuthResponse, AIModelOption, KnowledgeSnippet, TopicRecord, AdminDraftItem, AdminApiKeyConfig, AdminSystemStats, OpenRouterSystemHealthResponse, ActiveUsersResponse } from '../types';
 import { INITIAL_USER_PROGRESS, INITIAL_QUESTIONS, CHAPTERS_DATA, INITIAL_KNOWLEDGE_SNIPPETS } from '../data/admissionData';
 import { fetchWithRetry, probeServerHealth } from '../utils/apiClient';
 
@@ -14,7 +14,7 @@ const OPENROUTER_KEYS_LIST = 'varsity_admission_openrouter_keys_list_v1';
 const CUSTOM_MODEL_KEY = 'varsity_admission_custom_model_v1';
 const CUSTOM_SERVER_URL_KEY = 'jachai_custom_api_server_url_v1';
 
-const DEFAULT_BACKEND_URL = 'https://unblessed-plexiglas-repeater.ngrok-free.dev';
+const DEFAULT_BACKEND_URL = '';
 
 // ---------------- API Server Base URL Configuration ----------------
 
@@ -22,7 +22,11 @@ export function getApiBaseUrl(): string {
   try {
     const savedCustomUrl = localStorage.getItem(CUSTOM_SERVER_URL_KEY);
     if (savedCustomUrl && savedCustomUrl.trim()) {
-      return savedCustomUrl.trim().replace(/\/+$/, '');
+      if (savedCustomUrl.includes('unblessed-plexiglas-repeater')) {
+        localStorage.removeItem(CUSTOM_SERVER_URL_KEY);
+      } else {
+        return savedCustomUrl.trim().replace(/\/+$/, '');
+      }
     }
   } catch (e) {}
 
@@ -853,20 +857,93 @@ export async function verifyAdminPassword(password: string): Promise<boolean> {
 
 // ---------------- AI Operations (Gemini & OpenRouter) ----------------
 
+export const DEFAULT_FALLBACK_AI_MODELS: AIModelOption[] = [
+  {
+    id: 'openrouter/free',
+    name: 'OpenRouter Free Router',
+    provider: 'openrouter',
+    category: 'router',
+    description: 'সর্বোচ্চ ফ্রি মডেলের মধ্য থেকে স্বয়ংক্রিয়ভাবে উপযুক্ত মডেল নির্বাচন করে',
+    badge: 'ডিফল্ট • ফ্রি অটো রাউটার',
+    supportsVision: true,
+    isPopular: true,
+  },
+  {
+    id: 'gemini-3.7-flash',
+    name: 'Google Gemini 3.7 Flash',
+    provider: 'gemini',
+    category: 'gemini',
+    description: 'অত্যন্ত দ্রুত ও নির্ভুল, ম্যাথ ও বাংলা প্রশ্নের সেরা ব্যাখ্যা',
+    badge: 'গুগল ফ্ল্যাগশিপ',
+    supportsVision: true,
+    isPopular: true,
+  },
+  {
+    id: 'nvidia/llama-3.1-nemotron-70b-instruct:free',
+    name: 'NVIDIA Nemotron 70B (Free)',
+    provider: 'openrouter',
+    category: 'reasoning',
+    description: 'জটিল ফিজিক্স, কেমিস্ট্রি ম্যাথ ও ল্যাটেক্স সমীকরণ সঠিকভাবে প্রসেস করতে আদর্শ',
+    badge: 'উচ্চ যুক্তি ও গণিত',
+    supportsVision: false,
+    isPopular: true,
+  },
+  {
+    id: 'meta-llama/llama-3.3-70b-instruct:free',
+    name: 'Meta Llama 3.3 70B (Free)',
+    provider: 'openrouter',
+    category: 'chat',
+    description: 'বাংলা ব্যাকরণ, সাধারণ জ্ঞান এবং দীর্ঘ চ্যাপ্টার সামারি তৈরির জন্য চমৎকার',
+    badge: 'উচ্চ নির্ভুলতা',
+    supportsVision: false,
+  },
+  {
+    id: 'qwen/qwen-2.5-coder-32b-instruct:free',
+    name: 'Qwen 2.5 Coder 32B (Free)',
+    provider: 'openrouter',
+    category: 'reasoning',
+    description: 'শতভাগ নিখুঁত ও সঠিক JSON স্কিমা ফরম্যাট ডেলিভারিতে পারদর্শী',
+    badge: 'কঠোর স্ট্রাকচার',
+    supportsVision: false,
+  },
+  {
+    id: 'google/gemini-2.0-flash-exp:free',
+    name: 'Google Gemini 2.0 Flash (Free)',
+    provider: 'openrouter',
+    category: 'chat',
+    description: 'ছবি ও মাল্টিমোডাল ইনপুট প্রসেসিংয়ে দক্ষ',
+    badge: 'ফ্রি ভিশন',
+    supportsVision: true,
+  },
+  {
+    id: 'custom',
+    name: 'কাস্টম OpenRouter মডেল',
+    provider: 'openrouter',
+    category: 'custom',
+    description: 'যেকোনো OpenRouter মডেল আইডি ম্যানুয়ালি ইনপুট দিন',
+    supportsVision: true,
+  },
+];
+
 export async function fetchAIModelsApi(): Promise<{
   models: AIModelOption[];
   serverConfig: { hasGeminiKey: boolean; hasOpenRouterKey: boolean };
 }> {
   try {
-    const response = await fetchWithRetry(getApiUrl('/api/ai/models'));
+    const response = await fetchWithRetry(getApiUrl('/api/ai/models'), {}, { maxRetries: 1, timeoutMs: 8000 });
     if (response.ok) {
-      return await response.json();
+      const data = await response.json();
+      if (data && Array.isArray(data.models) && data.models.length > 0) {
+        return data;
+      }
     }
-  } catch (e) {
-    console.error('Failed to fetch AI models:', e);
+  } catch (e: any) {
+    if (e?.name !== 'AbortError' && !e?.message?.includes('aborted')) {
+      console.warn('AI models list load note:', e?.message || e);
+    }
   }
   return {
-    models: [],
+    models: DEFAULT_FALLBACK_AI_MODELS,
     serverConfig: { hasGeminiKey: true, hasOpenRouterKey: false },
   };
 }
@@ -1157,8 +1234,17 @@ export async function fetchChatHistoryApi(): Promise<ChatMessage[]> {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetchWithRetry(getApiUrl('/api/ai/history'), { headers });
+    const response = await fetchWithRetry(
+      getApiUrl('/api/ai/history'),
+      { headers },
+      { maxRetries: 1, timeoutMs: 8000 }
+    );
     if (!response.ok) return [];
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return [];
+    }
 
     const data = await response.json();
     return (data.history || []).map((msg: any) => ({
@@ -1169,8 +1255,10 @@ export async function fetchChatHistoryApi(): Promise<ChatMessage[]> {
       provider: msg.provider,
       timestamp: msg.timestamp || Date.now(),
     }));
-  } catch (err) {
-    console.error('Failed to load chat history from API:', err);
+  } catch (err: any) {
+    if (err?.name !== 'AbortError' && !err?.message?.includes('aborted')) {
+      console.warn('Chat history fetch note:', err?.message || err);
+    }
     return [];
   }
 }
@@ -1189,13 +1277,19 @@ export async function saveChatMessageApi(message: {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    await fetchWithRetry(getApiUrl('/api/ai/history'), {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(message),
-    });
-  } catch (err) {
-    console.warn('Could not persist chat message to SQLite:', err);
+    await fetchWithRetry(
+      getApiUrl('/api/ai/history'),
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(message),
+      },
+      { maxRetries: 1, timeoutMs: 6000 }
+    );
+  } catch (err: any) {
+    if (err?.name !== 'AbortError' && !err?.message?.includes('aborted')) {
+      console.warn('Could not persist chat message to SQLite:', err?.message || err);
+    }
   }
 }
 
@@ -1207,13 +1301,19 @@ export async function clearChatHistoryApi(): Promise<boolean> {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetchWithRetry(getApiUrl('/api/ai/history'), {
-      method: 'DELETE',
-      headers,
-    });
+    const res = await fetchWithRetry(
+      getApiUrl('/api/ai/history'),
+      {
+        method: 'DELETE',
+        headers,
+      },
+      { maxRetries: 1, timeoutMs: 6000 }
+    );
     return res.ok;
-  } catch (err) {
-    console.error('Failed to clear chat history:', err);
+  } catch (err: any) {
+    if (err?.name !== 'AbortError' && !err?.message?.includes('aborted')) {
+      console.warn('Failed to clear chat history:', err?.message || err);
+    }
     return false;
   }
 }
@@ -1448,6 +1548,59 @@ export async function reportQuestionApi(params: {
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'রিপোর্ট জমা দেওয়া সম্ভব হয়নি');
+  return data;
+}
+
+// ---------------- Real-time Active Users Telemetry API ----------------
+
+export async function sendUserHeartbeatApi(payload: {
+  page?: string;
+  targetUniversity?: string;
+  device?: string;
+  sessionId?: string;
+}): Promise<{ success: boolean; timestamp: number; totalActiveNow: number }> {
+  try {
+    const token = getAuthToken();
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetchWithRetry(getApiUrl('/api/user/heartbeat'), {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      return { success: false, timestamp: Date.now(), totalActiveNow: 0 };
+    }
+    return await res.json();
+  } catch {
+    return { success: false, timestamp: Date.now(), totalActiveNow: 0 };
+  }
+}
+
+export async function fetchAdminActiveUsersApi(): Promise<ActiveUsersResponse> {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/active-users'), {
+    headers: getAdminAuthHeaders(),
+  });
+  
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text().catch(() => '');
+    if (text.includes('<!doctype') || text.includes('<html')) {
+      throw new Error(`সার্ভার সংযোগ ত্রুটি (${res.status}): API রুট পাওয়া যায়নি বা ব্যাকএন্ডে সংযোগ বিঘ্নিত হয়েছে`);
+    }
+    throw new Error(`অপ্রত্যাশিত ডেটা ফরম্যাট (${res.status})`);
+  }
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'সক্রিয় ব্যবহারকারীদের তথ্য লোড করতে ব্যর্থ হয়েছে');
+  }
   return data;
 }
 

@@ -1,11 +1,30 @@
 ================================================================================
           JACHAI (যাচাই) — COMPREHENSIVE DEPLOYMENT & EXECUTION MANUAL
 ================================================================================
-Document Version: 2.0 (Post-Refactor & Production Modernization)
+Document Version: 3.0 (Multi-Page Split, Admin Hub Separation & Real-Time Telemetry)
 Supported Platforms: Android Termux, Cloud Serverless/Free Tier, Sketchware Pro WebView
 
 This guide provides exact step-by-step instructions to run, host, and embed JACHAI
 across three distinct deployment environments.
+
+================================================================================
+ARCHITECTURE OVERVIEW: ISOLATED MULTI-PAGE APPS & REAL-TIME TELEMETRY
+================================================================================
+JACHAI is architected with complete frontend decoupling:
+1. Public Student Portal:
+   - Entry Point: `index.html` -> `src/main.tsx` -> `src/App.tsx`
+   - Serves students on `/`, `/questions`, `/exam`, `/progress`, `/history`.
+   - Automatically emits non-blocking heartbeats (`/api/user/heartbeat`) with device info
+     and active page state.
+2. Independent Standalone Admin Hub:
+   - Entry Point: `admin.html` -> `src/admin-main.tsx` -> `src/AdminApp.tsx`
+   - Served securely on `/admin*` and `/admin-portal`.
+   - Completely isolated React root, state tree, and bundle from student users.
+   - Includes real-time active users telemetry tab (`AdminActiveUsersTab`), AI extraction pipeline,
+     draft approvals, live question CRUD, API key pool manager, and system health monitors.
+3. Unified Production Server:
+   - Express backend on port 3000 routes `/admin*` requests to `dist/admin.html`
+     and all other SPA requests to `dist/index.html`.
 
 ================================================================================
 ENVIRONMENT A: TERMUX (ANDROID LOCAL RUNTIME)

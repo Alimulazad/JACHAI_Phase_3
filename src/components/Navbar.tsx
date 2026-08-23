@@ -186,20 +186,34 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <ChevronRight className="w-4 h-4 text-slate-400" />
                   </button>
 
-                  {/* Admin Shortcut */}
+                  {/* Admin Shortcuts */}
+                  <a
+                    href="/admin-portal"
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                    className="w-full flex items-center justify-between p-2.5 rounded-xl bg-indigo-50/80 hover:bg-indigo-100/80 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-xs">অ্যাডমিন হাব (পৃথক পোর্টাল)</span>
+                        <span className="text-[10px] text-indigo-500/80 dark:text-indigo-400/80">/admin-portal</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-indigo-400" />
+                  </a>
+
                   {onNavigateToAdmin && (
                     <button
                       onClick={() => {
                         setIsProfileMenuOpen(false);
                         onNavigateToAdmin();
                       }}
-                      className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 transition-colors text-left cursor-pointer"
+                      className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-300 transition-colors text-left cursor-pointer text-xs"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <Database className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        <span>অ্যাডমিন কন্ট্রোল সেন্টার</span>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-indigo-400" />
+                      <span>ইন-অ্যাপ অ্যাডমিন ভিউ</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
                     </button>
                   )}
                 </div>

@@ -17,7 +17,8 @@ import {
   Clock,
   CheckCheck,
   Activity,
-  Server
+  Server,
+  ExternalLink
 } from 'lucide-react';
 import { Question, AdminDraftItem, AdminApiKeyConfig, AdminSystemStats } from '../types';
 import { 
@@ -43,6 +44,7 @@ import { AdminDraftsQueueTab } from '../components/admin/AdminDraftsQueueTab';
 import { AdminApiKeysTab } from '../components/admin/AdminApiKeysTab';
 import { AdminQuestionsTab } from '../components/admin/AdminQuestionsTab';
 import { AdminSystemHealthWidget } from '../components/admin/AdminSystemHealthWidget';
+import { AdminActiveUsersTab } from '../components/admin/AdminActiveUsersTab';
 
 interface AdminScreenProps {
   onBackToApp: () => void;
@@ -54,8 +56,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
   const [authError, setAuthError] = useState<string>('');
   const [isVerifying, setIsVerifying] = useState<boolean>(false);
 
-  // Tab Navigation: 'dashboard' | 'extract' | 'drafts' | 'keys' | 'questions' | 'health'
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'extract' | 'drafts' | 'keys' | 'questions' | 'health'>('dashboard');
+  // Tab Navigation: 'dashboard' | 'active_users' | 'extract' | 'drafts' | 'keys' | 'questions' | 'health'
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'active_users' | 'extract' | 'drafts' | 'keys' | 'questions' | 'health'>('dashboard');
 
   // Core Data States
   const [stats, setStats] = useState<AdminSystemStats | null>(null);
@@ -355,6 +357,29 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
                 </span>
               </button>
 
+              {/* Tab: Active Users Monitoring */}
+              <button
+                id="admin-tab-active-users"
+                onClick={() => setActiveTab('active_users')}
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer z-10 ${
+                  activeTab === 'active_users'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                {activeTab === 'active_users' && (
+                  <motion.div
+                    layoutId="admin-active-nav-pill"
+                    className="absolute inset-0 bg-emerald-600 rounded-xl shadow-lg shadow-emerald-600/30"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  <span>লাইভ অ্যাক্টিভ ইউজার</span>
+                </span>
+              </button>
+
               {/* Tab 2: AI Extract */}
               <button
                 id="admin-tab-extract"
@@ -486,6 +511,26 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
 
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        {/* Dedicated Admin Portal Banner */}
+        <div className="mb-6 p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/20 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-indigo-300">
+            <span className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400">
+              <ShieldCheck className="w-4 h-4" />
+            </span>
+            <span>
+              <strong>স্বাধীন অ্যাডমিন পোর্টাল:</strong> সম্পূর্ণ আইসোলেটেড অ্যাডমিন হাব ব্রাউজ করতে সরাসরি পোর্টাল ব্যবহার করুন।
+            </span>
+          </div>
+          <a
+            href="/admin-portal"
+            target="_blank"
+            rel="noreferrer"
+            className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-600/25 transition cursor-pointer whitespace-nowrap"
+          >
+            পোর্টাল ওপেন করুন <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+
         {activeTab === 'dashboard' && (
           <AdminDashboardTab
             stats={stats}
@@ -494,6 +539,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
             onNavigateTab={(tab) => setActiveTab(tab)}
           />
         )}
+
+        {activeTab === 'active_users' && <AdminActiveUsersTab />}
 
         {activeTab === 'health' && (
           <div className="space-y-6">

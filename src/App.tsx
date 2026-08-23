@@ -10,6 +10,7 @@ import {
   fetchCurrentUserApi,
   syncUserProgressToBackend,
   removeAuthToken,
+  sendUserHeartbeatApi,
 } from './services/api';
 import { INITIAL_QUESTIONS } from './data/admissionData';
 import Navbar from './components/Navbar';
@@ -23,8 +24,6 @@ import { ScreenSkeletonLoader } from './components/common/SkeletonLoader';
 import { useToast } from './context/ToastContext';
 import { useTheme } from './context/ThemeContext';
 import { useNetwork } from './context/NetworkContext';
-import { InitialOfflineNotice } from './components/common/InitialOfflineNotice';
-import { NetworkStatusBanner } from './components/common/NetworkStatusBanner';
 
 
 
@@ -131,6 +130,35 @@ export function App() {
     loadDatabaseQuestions();
   }, [loadDatabaseQuestions]);
 
+  // Real-time Active User Heartbeat & Telemetry Tracking
+  useEffect(() => {
+    const getPageName = (path: string) => {
+      if (path.startsWith('/admin')) return 'অ্যাডমিন ড্যাশবোর্ড';
+      if (path.startsWith('/questions')) return 'প্রশ্নব্যাংক এক্সপ্লোরার';
+      if (path.startsWith('/exam')) return 'মডেল টেস্ট পরীক্ষা';
+      if (path.startsWith('/progress')) return 'অগ্রগতি ড্যাশবোর্ড';
+      if (path.startsWith('/history')) return 'পরীক্ষার ইতিহাস';
+      return 'হোমপেজ ও ড্যাশবোর্ড';
+    };
+
+    const emitHeartbeat = () => {
+      let deviceInfo = 'Desktop / PC';
+      if (/Android/i.test(navigator.userAgent)) deviceInfo = 'Android Phone';
+      else if (/iPhone/i.test(navigator.userAgent)) deviceInfo = 'iPhone';
+      else if (/iPad/i.test(navigator.userAgent)) deviceInfo = 'iPad Tablet';
+
+      sendUserHeartbeatApi({
+        page: getPageName(location.pathname),
+        targetUniversity: userProgress.targetUniversity,
+        device: deviceInfo,
+      }).catch(() => {});
+    };
+
+    emitHeartbeat();
+    const interval = setInterval(emitHeartbeat, 30000); // Heartbeat every 30 seconds
+    return () => clearInterval(interval);
+  }, [location.pathname, userProgress.targetUniversity]);
+
 
   const handleUpdateProgress = (updated: Partial<UserProgress>) => {
     setUserProgress((prev) => {
@@ -204,34 +232,9 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // If initial server connection failed and user has not chosen offline mode yet, show full screen initial offline screen
-  if (initialConnectionFailed && !isOfflineMode) {
-    return (
-      <InitialOfflineNotice
-        onRetry={async () => {
-          const ok = await triggerReconnection();
-          if (ok) {
-            await loadDatabaseQuestions();
-            const authData = await fetchCurrentUserApi();
-            if (authData) {
-              setCurrentUser(authData.user);
-              if (authData.progress) {
-                setUserProgress(authData.progress);
-              }
-            }
-            return true;
-          }
-          return false;
-        }}
-        onContinueOffline={continueOffline}
-      />
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex flex-col selection:bg-emerald-500 selection:text-white transition-colors duration-200">
-      {/* Network Offline & Reconnecting Warning Banner */}
-      <NetworkStatusBanner />
+      {/* Top Header Navbar */}
 
 
       {/* Top Header Navbar */}

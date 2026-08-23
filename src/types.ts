@@ -330,4 +330,37 @@ export interface OpenRouterSystemHealthResponse {
   serverTime: string;
 }
 
+export interface ActiveUserItem {
+  sessionId: string;
+  userId?: string;
+  name: string;
+  phone?: string;
+  avatar?: string;
+  avatarColor?: string;
+  targetUniversity?: string;
+  targetUnit?: string;
+  college?: string;
+  device?: string;
+  browser?: string;
+  ip?: string;
+  currentPage: string;
+  firstSeenAt: number;
+  lastActiveAt: number;
+  requestCount: number;
+  isGuest: boolean;
+  status: 'online' | 'idle' | 'offline';
+}
+
+export interface ActiveUsersResponse {
+  success: boolean;
+  totalActiveNow: number;
+  totalActiveToday: number;
+  totalRegisteredActive: number;
+  totalGuestsActive: number;
+  activeUsers: ActiveUserItem[];
+  universityBreakdown: Record<string, number>;
+  pageBreakdown: Record<string, number>;
+  lastUpdated: number;
+}
+
 

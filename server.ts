@@ -46,6 +46,8 @@ import {
   getDatabase,
   getDatabaseConnectionInfo,
   isPostgresActive,
+  recordUserActivityInDb,
+  getActiveUsersTelemetryFromDb,
 } from './server/db.js';
 import { uploadQuestionImages, uploadSingleImage } from './server/utils/upload.js';
 import { logger } from './server/utils/logger.js';
@@ -110,6 +112,38 @@ app.use(
 );
 
 app.use(express.json({ limit: '25mb' }));
+
+// Global Real-time User Activity & Session Tracking Middleware
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    let userId: string | undefined;
+    if (token) {
+      try {
+        const decoded: any = jwt.decode(token);
+        if (decoded && decoded.userId && decoded.userId !== 'admin') {
+          userId = decoded.userId;
+        }
+      } catch {}
+    }
+
+    const customSessionId = (req.headers['x-session-id'] as string) || (req.query.sessionId as string);
+    const rawIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const ip = Array.isArray(rawIp) ? rawIp[0] : rawIp.split(',')[0].trim();
+    const userAgent = (req.headers['user-agent'] as string) || 'Web Browser';
+    const currentPage = (req.headers['x-current-page'] as string) || undefined;
+
+    recordUserActivityInDb({
+      userId,
+      customSessionId,
+      ip,
+      userAgent,
+      currentPage,
+    }).catch(() => {});
+  } catch {}
+  next();
+});
 
 // Rate Limiters
 export const authRateLimiter = rateLimit({
@@ -2467,6 +2501,97 @@ Answer in Bengali (বাংলা).`;
   }
 });
 
+// ---------------- AI CHAT HISTORY API ----------------
+
+// GET /api/ai/history - Retrieve chat history for current student or guest session
+app.get('/api/ai/history', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    let userId = 'guest_default';
+    if (token) {
+      try {
+        const decoded: any = jwt.verify(token, EFFECTIVE_JWT_SECRET);
+        if (decoded && decoded.userId) {
+          userId = decoded.userId;
+        }
+      } catch {}
+    } else {
+      const customSessionId = (req.headers['x-session-id'] as string) || (req.query.sessionId as string);
+      if (customSessionId && typeof customSessionId === 'string' && customSessionId.trim()) {
+        userId = `guest_${customSessionId.trim()}`;
+      }
+    }
+
+    const history = await getChatHistoryFromDb(userId);
+    return res.json({ success: true, history });
+  } catch (error: any) {
+    console.error('Error fetching chat history:', error);
+    return res.status(500).json({ error: 'চ্যাট হিস্ট্রি লোড করতে ব্যর্থ হয়েছে', history: [] });
+  }
+});
+
+// POST /api/ai/history - Save chat message to database
+app.post('/api/ai/history', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    let userId = 'guest_default';
+    if (token) {
+      try {
+        const decoded: any = jwt.verify(token, EFFECTIVE_JWT_SECRET);
+        if (decoded && decoded.userId) {
+          userId = decoded.userId;
+        }
+      } catch {}
+    } else {
+      const customSessionId = (req.headers['x-session-id'] as string) || (req.query.sessionId as string);
+      if (customSessionId && typeof customSessionId === 'string' && customSessionId.trim()) {
+        userId = `guest_${customSessionId.trim()}`;
+      }
+    }
+
+    const { id, role, content, modelUsed, provider } = req.body;
+    if (!content || !role) {
+      return res.status(400).json({ error: 'role and content are required' });
+    }
+
+    const saved = await saveChatMessageToDb(userId, role, content, modelUsed, provider, id);
+    return res.json({ success: true, message: saved });
+  } catch (error: any) {
+    console.error('Error saving chat message:', error);
+    return res.status(500).json({ error: 'মেসেজ সংরক্ষণ করতে ব্যর্থ হয়েছে' });
+  }
+});
+
+// DELETE /api/ai/history - Clear chat history for user/guest
+app.delete('/api/ai/history', async (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    let userId = 'guest_default';
+    if (token) {
+      try {
+        const decoded: any = jwt.verify(token, EFFECTIVE_JWT_SECRET);
+        if (decoded && decoded.userId) {
+          userId = decoded.userId;
+        }
+      } catch {}
+    } else {
+      const customSessionId = (req.headers['x-session-id'] as string) || (req.query.sessionId as string);
+      if (customSessionId && typeof customSessionId === 'string' && customSessionId.trim()) {
+        userId = `guest_${customSessionId.trim()}`;
+      }
+    }
+
+    await clearChatHistoryInDb(userId);
+    return res.json({ success: true, message: 'Chat history cleared' });
+  } catch (error: any) {
+    console.error('Error clearing chat history:', error);
+    return res.status(500).json({ error: 'চ্যাট হিস্ট্রি মুছতে ব্যর্থ হয়েছে' });
+  }
+});
+
 // Google Workspace: Sync Admission Dates to Google Calendar
 app.post('/api/google/calendar/sync-dates', async (req: Request, res: Response) => {
   try {
@@ -2590,6 +2715,61 @@ app.get('/api/db/status', async (req: Request, res: Response) => {
   }
 });
 
+// ---------------- REAL-TIME ACTIVE USERS & HEARTBEAT API ----------------
+
+// POST /api/user/heartbeat - Student periodic heartbeat endpoint
+app.post('/api/user/heartbeat', async (req: Request, res: Response) => {
+  try {
+    const { page, targetUniversity, device, sessionId } = req.body || {};
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    let userId: string | undefined;
+
+    if (token) {
+      try {
+        const decoded: any = jwt.verify(token, EFFECTIVE_JWT_SECRET);
+        if (decoded && decoded.userId && decoded.userId !== 'admin') {
+          userId = decoded.userId;
+        }
+      } catch {}
+    }
+
+    const rawIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
+    const ip = Array.isArray(rawIp) ? rawIp[0] : rawIp.split(',')[0].trim();
+    const userAgent = (req.headers['user-agent'] as string) || 'Web Browser';
+
+    await recordUserActivityInDb({
+      userId,
+      customSessionId: sessionId,
+      ip,
+      userAgent,
+      currentPage: page,
+      targetUniversity,
+      deviceInfo: device,
+    });
+
+    const telemetry = await getActiveUsersTelemetryFromDb();
+
+    return res.json({
+      success: true,
+      timestamp: Date.now(),
+      totalActiveNow: telemetry.totalActiveNow,
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Heartbeat processing failed' });
+  }
+});
+
+// GET /api/admin/active-users - Real-time active users monitoring (Admin Only)
+app.get('/api/admin/active-users', authenticateAdmin, async (_req: Request, res: Response) => {
+  try {
+    const telemetry = await getActiveUsersTelemetryFromDb();
+    return res.json(telemetry);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Failed to fetch active users telemetry' });
+  }
+});
+
 // ---------------- CENTRALIZED ERROR HANDLING MIDDLEWARE ----------------
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   const statusCode = err.status || err.statusCode || 500;
@@ -2604,7 +2784,7 @@ app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-// ---------------- VITE & SERVER LAUNCH ----------------
+// ---------------- VITE & SERVER LAUNCH (MULTI-PAGE SETUP) ----------------
 
 async function startServer() {
   // Eagerly initialize and verify database connection on boot
@@ -2624,14 +2804,27 @@ async function startServer() {
     });
     app.use(vite.middlewares);
 
-    // Development SPA HTML Fallback (ensures GET / and client routes load index.html via Vite)
+    // Development Multi-Page SPA HTML Fallback
+    // Serves admin.html for Admin routes (/admin-portal, /admin, /admin.html) and index.html for User routes
     app.use('*', async (req: Request, res: Response, next: NextFunction) => {
       const url = req.originalUrl;
+      const isAdminRoute =
+        url.startsWith('/admin-portal') ||
+        url.startsWith('/admin.html') ||
+        url === '/admin' ||
+        url.startsWith('/admin/');
+
+      const targetHtmlFile = isAdminRoute ? 'admin.html' : 'index.html';
+
       try {
         const fs = await import('fs');
-        const indexPath = path.resolve(process.cwd(), 'index.html');
-        if (fs.existsSync(indexPath)) {
-          let template = fs.readFileSync(indexPath, 'utf-8');
+        let targetPath = path.resolve(process.cwd(), targetHtmlFile);
+        if (!fs.existsSync(targetPath)) {
+          targetPath = path.resolve(process.cwd(), 'index.html');
+        }
+
+        if (fs.existsSync(targetPath)) {
+          let template = fs.readFileSync(targetPath, 'utf-8');
           template = await vite.transformIndexHtml(url, template);
           res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
           return;
@@ -2644,8 +2837,20 @@ async function startServer() {
     });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+    const fs = await import('fs');
     app.use(express.static(distPath));
-    app.get('*', (req: Request, res: Response) => {
+
+    // Production Admin Portal Routes
+    app.get(['/admin-portal', '/admin-portal/*', '/admin', '/admin/*', '/admin.html'], (_req: Request, res: Response) => {
+      const adminPath = path.join(distPath, 'admin.html');
+      if (fs.existsSync(adminPath)) {
+        return res.sendFile(adminPath);
+      }
+      return res.sendFile(path.join(distPath, 'index.html'));
+    });
+
+    // Production User Student App Route
+    app.get('*', (_req: Request, res: Response) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
