@@ -14,6 +14,8 @@ const OPENROUTER_KEYS_LIST = 'varsity_admission_openrouter_keys_list_v1';
 const CUSTOM_MODEL_KEY = 'varsity_admission_custom_model_v1';
 const CUSTOM_SERVER_URL_KEY = 'jachai_custom_api_server_url_v1';
 
+const DEFAULT_BACKEND_URL = 'https://unblessed-plexiglas-repeater.ngrok-free.dev';
+
 // ---------------- API Server Base URL Configuration ----------------
 
 export function getApiBaseUrl(): string {
@@ -25,7 +27,12 @@ export function getApiBaseUrl(): string {
   } catch (e) {}
 
   const metaEnv = (typeof import.meta !== 'undefined' ? (import.meta as any).env : null) || {};
-  const envUrl = (metaEnv.VITE_SERVER_URL_FOR_ADMIN || metaEnv.VITE_SERVER_URL || '').trim();
+  const envUrl = (
+    metaEnv.VITE_API_BASE_URL ||
+    metaEnv.VITE_SERVER_URL_FOR_ADMIN ||
+    metaEnv.VITE_SERVER_URL ||
+    DEFAULT_BACKEND_URL
+  ).trim();
 
   return envUrl.replace(/\/+$/, '');
 }

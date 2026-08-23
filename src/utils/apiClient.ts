@@ -102,8 +102,15 @@ export async function fetchWithRetry(
     }
 
     try {
+      // Merge global headers including ngrok warning bypass
+      const headers = new Headers(init?.headers || {});
+      if (!headers.has('ngrok-skip-browser-warning')) {
+        headers.set('ngrok-skip-browser-warning', 'true');
+      }
+
       const response = await fetch(input, {
         ...init,
+        headers,
         signal: mergedSignal,
       });
 
@@ -173,6 +180,9 @@ export async function probeServerHealth(serverUrl: string): Promise<boolean> {
 
     const res = await fetch(target, {
       method: 'GET',
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+      },
       signal: controller.signal,
       cache: 'no-store',
     });

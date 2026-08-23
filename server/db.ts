@@ -29,11 +29,13 @@ export function getPgPool(): pg.Pool | null {
     ssl: isRemote ? { rejectUnauthorized: false } : false,
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 3000,
   });
 
   poolInstance.on('error', (err) => {
-    console.warn('[PostgreSQL Pool Unexpected Error]:', err.message);
+    if (isPgConnected) {
+      console.warn('[PostgreSQL Pool Error]:', err.message);
+    }
   });
 
   return poolInstance;
@@ -513,7 +515,15 @@ export async function getDatabase(): Promise<void> {
       console.log(`[PostgreSQL] ✅ Initialized & synced ${memoryStore.questions.size} questions, ${memoryStore.topics.size} topics, and formulas into PostgreSQL.`);
     } catch (err: any) {
       isPgConnected = false;
-      console.log(`[Database] ⚠️ PostgreSQL connection failed (${err.message}). Using local embedded storage fallback.`);
+      if (poolInstance) {
+        try {
+          await poolInstance.end();
+        } catch {
+          // ignore pool termination error on failed connection
+        }
+        poolInstance = null;
+      }
+      console.log(`[Database] PostgreSQL not connected (${err.message}). Seamlessly running with in-memory storage fallback.`);
     } finally {
       isInitialized = true;
     }
