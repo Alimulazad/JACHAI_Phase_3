@@ -453,7 +453,7 @@ export const AdminApiKeysTab: React.FC<AdminApiKeysTabProps> = ({
           স্মার্ট ফেইলওভার ও ফ্রি টিয়ার অপটিমাইজেশন
         </h3>
         <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-          ওপেনরাউটারের ফ্রি মডেলগুলো (যেমন <code className="text-indigo-300">openrouter/free</code>, <code className="text-indigo-300">nvidia/llama-3.1-nemotron-70b-instruct:free</code>) অনেক সময় অতিরিক্ত ট্রাফিকের কারণে রেট লিমিট দেয়। একাধিক কি যুক্ত থাকলে যাচাই সিস্টেম নিজে নিজেই পরবর্তী কি-তে প্রশ্ন জেনারেট করে নেয়, যাতে শিক্ষার্থীদের পড়ালেখায় কোনো ব্যাঘাত না ঘটে।
+          ওপেনরাউটারের ফ্রি মডেলগুলো (যেমন <code className="text-indigo-300">openrouter/free</code>, <code className="text-indigo-300">nvidia/llama-3.1-nemotron-70b-instruct:free</code>) অনেক সময় অতিরিক্ত ট্রাফিকের কারণে রেট লিমিট দেয়। একাধিক কি যুক্ত থাকলে PrepTest সিস্টেম নিজে নিজেই পরবর্তী কি-তে প্রশ্ন জেনারেট করে নেয়, যাতে শিক্ষার্থীদের পড়ালেখায় কোনো ব্যাঘাত না ঘটে।
         </p>
       </div>
     </div>

@@ -66,6 +66,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
+// Trust reverse proxies (Nginx, Cloud Run, Ingress)
+app.set('trust proxy', 1);
+
 // Validate JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -114,6 +117,11 @@ export const authRateLimiter = rateLimit({
   max: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '30', 10),
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    xForwardedForHeader: false,
+    forwardedHeader: false,
+    trustProxy: false,
+  },
   message: { error: 'অতিরিক্ত রিকোয়েস্টের কারণে সাময়িক বিরতি। ১৫ মিনিট পর আবার চেষ্টা করুন।' },
 });
 
@@ -122,6 +130,11 @@ export const aiRateLimiter = rateLimit({
   max: parseInt(process.env.AI_RATE_LIMIT_MAX || '45', 10),
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    xForwardedForHeader: false,
+    forwardedHeader: false,
+    trustProxy: false,
+  },
   message: { error: 'AI রিকোয়েস্ট লিমিট অতিক্রম করেছে। কিছু সময় পর পুনরায় চেষ্টা করুন।' },
 });
 
@@ -2603,10 +2616,32 @@ async function startServer() {
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        allowedHosts: true,
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
+
+    // Development SPA HTML Fallback (ensures GET / and client routes load index.html via Vite)
+    app.use('*', async (req: Request, res: Response, next: NextFunction) => {
+      const url = req.originalUrl;
+      try {
+        const fs = await import('fs');
+        const indexPath = path.resolve(process.cwd(), 'index.html');
+        if (fs.existsSync(indexPath)) {
+          let template = fs.readFileSync(indexPath, 'utf-8');
+          template = await vite.transformIndexHtml(url, template);
+          res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+          return;
+        }
+        next();
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));

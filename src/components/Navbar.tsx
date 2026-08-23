@@ -59,19 +59,19 @@ export const Navbar: React.FC<NavbarProps> = ({
           </span>
         </div>
 
-        {/* Center: Stylized "যাচাই" Brand Logo + Tagline */}
+        {/* Center: Stylized PrepTest Brand Logo + Tagline */}
         <div
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           className="flex flex-col items-center justify-center cursor-pointer select-none group px-1"
         >
           <div className="flex items-center gap-1.5">
-            <span className="tracking-tight font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white font-serif leading-none">
-              যাচাই
+            <span className="tracking-tight font-black text-xl sm:text-2xl text-[#0A2540] dark:text-white leading-none">
+              Prep<span className="text-[#FF6B00]">Test</span>
             </span>
-            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 dark:text-emerald-400 fill-emerald-100 dark:fill-emerald-950 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-[#FF6B00] dark:text-[#FF6B00] fill-amber-100 dark:fill-amber-950 shrink-0" />
           </div>
-          <span className="hidden sm:inline-block text-[10px] text-slate-500 dark:text-slate-400 font-medium tracking-tight -mt-0.5 whitespace-nowrap">
-            যাচাই করো নিজেকে, ভর্তি যুদ্ধে বাঁচাইতে
+          <span className="hidden sm:inline-block text-[10px] text-slate-500 dark:text-slate-400 font-semibold tracking-tight -mt-0.5 whitespace-nowrap">
+            টেস্ট দাও বেস্ট হও
           </span>
         </div>
 

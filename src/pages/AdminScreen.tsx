@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'motion/react';
 import { 
   Database, 
   Lock, 
@@ -15,7 +16,8 @@ import {
   HelpCircle,
   Clock,
   CheckCheck,
-  Activity
+  Activity,
+  Server
 } from 'lucide-react';
 import { Question, AdminDraftItem, AdminApiKeyConfig, AdminSystemStats } from '../types';
 import { 
@@ -201,7 +203,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
             </div>
           </div>
           <h2 className="mt-4 text-center text-2xl font-black text-white tracking-tight">
-            JACHAI Control Center
+            PrepTest Control Center
           </h2>
           <p className="mt-1 text-center text-xs text-slate-400">
             নিরাপদ অ্যাডমিন অ্যাক্সেস ও AI পাইপলাইন ম্যানেজমেন্ট
@@ -271,7 +273,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
   return (
     <div className="min-h-screen bg-slate-900 font-sans text-slate-100 pb-16">
       {/* Top Navbar */}
-      <header className="bg-slate-950/90 text-white border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md shadow-md">
+      <header className="bg-slate-950/80 text-white border-b border-slate-800/80 sticky top-0 z-40 backdrop-blur-xl shadow-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Brand and back */}
@@ -279,24 +281,25 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
               <button
                 id="admin-btn-back-to-app"
                 onClick={onBackToApp}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs sm:text-sm font-medium transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs sm:text-sm font-medium border border-slate-800 transition-all cursor-pointer shadow-sm hover:border-slate-700"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>স্টুডেন্ট অ্যাপ</span>
+                <span className="hidden sm:inline">স্টুডেন্ট অ্যাপে ফিরুন</span>
+                <span className="sm:hidden">অ্যাপ</span>
               </button>
 
-              <div className="flex items-center gap-2 border-l border-slate-700 pl-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-inner">
+              <div className="flex items-center gap-2.5 border-l border-slate-800 pl-3">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
                   <Database className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-sm sm:text-base font-bold text-white tracking-tight">JACHAI Admin Hub</h1>
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    <h1 className="text-sm sm:text-base font-extrabold text-white tracking-tight">JACHAI Admin Hub</h1>
+                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                       v2.5
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-400 hidden sm:block">AI ডেটা পাইপলাইন ও লাইভ ম্যানেজমেন্ট</p>
+                  <p className="text-[11px] text-slate-400 hidden md:block">AI ডেটা পাইপলাইন ও লাইভ ম্যানেজমেন্ট</p>
                 </div>
               </div>
             </div>
@@ -308,8 +311,8 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
                 onClick={loadAllAdminData}
                 disabled={isLoading}
                 title="রিফ্রেশ করুন"
-                className={`p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all cursor-pointer ${
-                  isLoading ? 'animate-spin text-blue-400' : ''
+                className={`p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-all cursor-pointer shadow-sm ${
+                  isLoading ? 'animate-spin text-indigo-400' : ''
                 }`}
               >
                 <RefreshCw className="w-4 h-4" />
@@ -318,7 +321,7 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
               <button
                 id="admin-btn-logout"
                 onClick={handleLogout}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 text-xs sm:text-sm font-medium transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 text-xs sm:text-sm font-medium transition-all cursor-pointer"
               >
                 <Lock className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">লগআউট</span>
@@ -326,95 +329,157 @@ export const AdminScreen: React.FC<AdminScreenProps> = ({ onBackToApp }) => {
             </div>
           </div>
 
-          {/* Sub Navigation Bar */}
-          <div className="flex items-center space-x-1 overflow-x-auto scrollbar-none py-2 border-t border-slate-800/80">
-            <button
-              id="admin-tab-dashboard"
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
-                activeTab === 'dashboard'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <Cpu className="w-4 h-4" />
-              <span>ড্যাশবোর্ড ও ওভারভিউ</span>
-            </button>
-
-            <button
-              id="admin-tab-extract"
-              onClick={() => setActiveTab('extract')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
-                activeTab === 'extract'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>AI ডেটা এক্সট্রাক্টর</span>
-            </button>
-
-            <button
-              id="admin-tab-drafts"
-              onClick={() => setActiveTab('drafts')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all relative cursor-pointer ${
-                activeTab === 'drafts'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <CheckCheck className="w-4 h-4 text-emerald-400" />
-              <span>অনুমোদন কিউ (Pending)</span>
-              {stats && stats.pendingDrafts > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-amber-500 text-slate-950">
-                  {stats.pendingDrafts}
+          {/* Sub Navigation Bar - Sleek Glassmorphism Segmented Control */}
+          <div className="py-2.5 border-t border-slate-800/80">
+            <nav className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none p-1 rounded-2xl bg-slate-900/80 border border-slate-800/90 backdrop-blur-md">
+              {/* Tab 1: Dashboard */}
+              <button
+                id="admin-tab-dashboard"
+                onClick={() => setActiveTab('dashboard')}
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer z-10 ${
+                  activeTab === 'dashboard'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                {activeTab === 'dashboard' && (
+                  <motion.div
+                    layoutId="admin-active-nav-pill"
+                    className="absolute inset-0 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/30"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <Cpu className="w-4 h-4" />
+                  <span>ড্যাশবোর্ড ও ওভারভিউ</span>
                 </span>
-              )}
-            </button>
+              </button>
 
-            <button
-              id="admin-tab-keys"
-              onClick={() => setActiveTab('keys')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
-                activeTab === 'keys'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <Key className="w-4 h-4 text-cyan-400" />
-              <span>এপিআই কী ও ফেইলওভার</span>
-              {stats && (
-                <span className="ml-1 px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
-                  {stats.openRouterKeysCount} Keys
+              {/* Tab 2: AI Extract */}
+              <button
+                id="admin-tab-extract"
+                onClick={() => setActiveTab('extract')}
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer z-10 ${
+                  activeTab === 'extract'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                {activeTab === 'extract' && (
+                  <motion.div
+                    layoutId="admin-active-nav-pill"
+                    className="absolute inset-0 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/30"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>AI ডেটা এক্সট্রাক্টর</span>
                 </span>
-              )}
-            </button>
+              </button>
 
-            <button
-              id="admin-tab-health"
-              onClick={() => setActiveTab('health')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
-                activeTab === 'health'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <span>সিস্টেম হেলথ ও ল্যাটেন্সি</span>
-            </button>
+              {/* Tab 3: Drafts Queue */}
+              <button
+                id="admin-tab-drafts"
+                onClick={() => setActiveTab('drafts')}
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer z-10 ${
+                  activeTab === 'drafts'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                {activeTab === 'drafts' && (
+                  <motion.div
+                    layoutId="admin-active-nav-pill"
+                    className="absolute inset-0 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/30"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <CheckCheck className="w-4 h-4 text-emerald-400" />
+                  <span>অনুমোদন কিউ</span>
+                  {stats && stats.pendingDrafts > 0 && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-slate-950 shadow-sm animate-pulse">
+                      {stats.pendingDrafts}
+                    </span>
+                  )}
+                </span>
+              </button>
 
-            <button
-              id="admin-tab-questions"
-              onClick={() => setActiveTab('questions')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all cursor-pointer ${
-                activeTab === 'questions'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span>লাইভ প্রশ্নব্যাংক ({questions.length})</span>
-            </button>
+              {/* Tab 4: API Keys & Failover */}
+              <button
+                id="admin-tab-keys"
+                onClick={() => setActiveTab('keys')}
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer z-10 ${
+                  activeTab === 'keys'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                {activeTab === 'keys' && (
+                  <motion.div
+                    layoutId="admin-active-nav-pill"
+                    className="absolute inset-0 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/30"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <Key className="w-4 h-4 text-cyan-400" />
+                  <span>এপিআই কী ও ফেইলওভার</span>
+                  {stats && (
+                    <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700/80">
+                      {stats.openRouterKeysCount} Keys
+                    </span>
+                  )}
+                </span>
+              </button>
+
+              {/* Tab 5: System Health */}
+              <button
+                id="admin-tab-health"
+                onClick={() => setActiveTab('health')}
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer z-10 ${
+                  activeTab === 'health'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                {activeTab === 'health' && (
+                  <motion.div
+                    layoutId="admin-active-nav-pill"
+                    className="absolute inset-0 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/30"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                  <span>সিস্টেম হেলথ ও ল্যাটেন্সি</span>
+                </span>
+              </button>
+
+              {/* Tab 6: Questions Bank */}
+              <button
+                id="admin-tab-questions"
+                onClick={() => setActiveTab('questions')}
+                className={`relative flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all cursor-pointer z-10 ${
+                  activeTab === 'questions'
+                    ? 'text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                {activeTab === 'questions' && (
+                  <motion.div
+                    layoutId="admin-active-nav-pill"
+                    className="absolute inset-0 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-600/30"
+                    transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-purple-400" />
+                  <span>লাইভ প্রশ্নব্যাংক ({questions.length})</span>
+                </span>
+              </button>
+            </nav>
           </div>
         </div>
       </header>

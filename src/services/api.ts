@@ -1,5 +1,8 @@
 import { Question, UserProgress, ChatMessage, User, AuthResponse, AIModelOption, KnowledgeSnippet, TopicRecord, AdminDraftItem, AdminApiKeyConfig, AdminSystemStats, OpenRouterSystemHealthResponse } from '../types';
 import { INITIAL_USER_PROGRESS, INITIAL_QUESTIONS, CHAPTERS_DATA, INITIAL_KNOWLEDGE_SNIPPETS } from '../data/admissionData';
+import { fetchWithRetry, probeServerHealth } from '../utils/apiClient';
+
+export { probeServerHealth };
 
 const USER_STORAGE_KEY = 'varsity_admission_user_data_v1';
 const AUTH_TOKEN_KEY = 'varsity_admission_auth_token_v1';
@@ -9,6 +12,42 @@ const AI_MODEL_KEY = 'varsity_admission_ai_model_v1';
 const OPENROUTER_KEY = 'varsity_admission_openrouter_api_key_v1';
 const OPENROUTER_KEYS_LIST = 'varsity_admission_openrouter_keys_list_v1';
 const CUSTOM_MODEL_KEY = 'varsity_admission_custom_model_v1';
+const CUSTOM_SERVER_URL_KEY = 'jachai_custom_api_server_url_v1';
+
+// ---------------- API Server Base URL Configuration ----------------
+
+export function getApiBaseUrl(): string {
+  try {
+    const savedCustomUrl = localStorage.getItem(CUSTOM_SERVER_URL_KEY);
+    if (savedCustomUrl && savedCustomUrl.trim()) {
+      return savedCustomUrl.trim().replace(/\/+$/, '');
+    }
+  } catch (e) {}
+
+  const metaEnv = (typeof import.meta !== 'undefined' ? (import.meta as any).env : null) || {};
+  const envUrl = (metaEnv.VITE_SERVER_URL_FOR_ADMIN || metaEnv.VITE_SERVER_URL || '').trim();
+
+  return envUrl.replace(/\/+$/, '');
+}
+
+export function setCustomServerUrl(url: string): void {
+  try {
+    if (!url || !url.trim()) {
+      localStorage.removeItem(CUSTOM_SERVER_URL_KEY);
+    } else {
+      localStorage.setItem(CUSTOM_SERVER_URL_KEY, url.trim().replace(/\/+$/, ''));
+    }
+  } catch (e) {}
+}
+
+export function getApiUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+  const base = getApiBaseUrl();
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return base ? `${base}${cleanPath}` : cleanPath;
+}
 
 // ---------------- Token, User & AI Storage Management ----------------
 
@@ -190,7 +229,7 @@ export async function registerUserApi(payload: {
   avatar?: string;
   avatarBgColor?: string;
 }): Promise<AuthResponse> {
-  const response = await fetch('/api/auth/register', {
+  const response = await fetchWithRetry(getApiUrl('/api/auth/register'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -211,7 +250,7 @@ export async function loginUserApi(payload: {
   phone: string;
   password: string;
 }): Promise<AuthResponse> {
-  const response = await fetch('/api/auth/login', {
+  const response = await fetchWithRetry(getApiUrl('/api/auth/login'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -233,7 +272,7 @@ export async function fetchCurrentUserApi(): Promise<AuthResponse | null> {
   if (!token) return null;
 
   try {
-    const response = await fetch('/api/auth/me', {
+    const response = await fetchWithRetry(getApiUrl('/api/auth/me'), {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -272,7 +311,7 @@ export async function updateUserProfileApi(payload: {
   const token = getAuthToken();
   if (!token) throw new Error('অনুগ্রহ করে লগইন করুন');
 
-  const response = await fetch('/api/auth/profile', {
+  const response = await fetchWithRetry(getApiUrl('/api/auth/profile'), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -296,7 +335,7 @@ export async function fetchUserProgressFromBackend(): Promise<UserProgress | nul
   if (!token) return null;
 
   try {
-    const response = await fetch('/api/user/progress', {
+    const response = await fetchWithRetry(getApiUrl('/api/user/progress'), {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -316,7 +355,7 @@ export async function syncUserProgressToBackend(progress: UserProgress): Promise
   if (!token) return;
 
   try {
-    await fetch('/api/user/progress', {
+    await fetchWithRetry(getApiUrl('/api/user/progress'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -461,7 +500,7 @@ export async function fetchQuestions(filters?: FetchQuestionsParams): Promise<Qu
     const queryString = params.toString();
     const url = `/api/questions${queryString ? `?${queryString}` : ''}`;
     
-    const response = await fetch(url);
+    const response = await fetchWithRetry(getApiUrl(url));
     if (!response.ok) {
       return getFilteredInitialQuestions(filters);
     }
@@ -494,7 +533,7 @@ export async function fetchPaginatedQuestions(filters?: FetchQuestionsParams): P
     const queryString = params.toString();
     const url = `/api/questions${queryString ? `?${queryString}` : ''}`;
 
-    const response = await fetch(url);
+    const response = await fetchWithRetry(getApiUrl(url));
     if (!response.ok) {
       const fallbackList = getFilteredInitialQuestions(filters);
       const page = filters?.page || 1;
@@ -549,7 +588,7 @@ export async function uploadImage(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('image', file);
 
-  const response = await fetch('/api/upload/image', {
+  const response = await fetchWithRetry(getApiUrl('/api/upload/image'), {
     method: 'POST',
     body: formData,
   });
@@ -589,13 +628,13 @@ export async function createQuestion(
       formData.append('explanation_image', files.explanationImageFile);
     }
 
-    response = await fetch('/api/questions', {
+    response = await fetchWithRetry(getApiUrl('/api/questions'), {
       method: 'POST',
       headers: adminHeaders,
       body: formData,
     });
   } else {
-    response = await fetch('/api/questions', {
+    response = await fetchWithRetry(getApiUrl('/api/questions'), {
       method: 'POST',
       headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(questionData),
@@ -637,13 +676,13 @@ export async function updateQuestion(
       formData.append('explanation_image', files.explanationImageFile);
     }
 
-    response = await fetch(`/api/questions/${encodeURIComponent(id)}`, {
+    response = await fetchWithRetry(getApiUrl(`/api/questions/${encodeURIComponent(id)}`), {
       method: 'PUT',
       headers: adminHeaders,
       body: formData,
     });
   } else {
-    response = await fetch(`/api/questions/${encodeURIComponent(id)}`, {
+    response = await fetchWithRetry(getApiUrl(`/api/questions/${encodeURIComponent(id)}`), {
       method: 'PUT',
       headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(questionData),
@@ -659,7 +698,7 @@ export async function updateQuestion(
 }
 
 export async function deleteQuestion(id: string): Promise<boolean> {
-  const response = await fetch(`/api/questions/${encodeURIComponent(id)}`, {
+  const response = await fetchWithRetry(getApiUrl(`/api/questions/${encodeURIComponent(id)}`), {
     method: 'DELETE',
     headers: getAdminAuthHeaders(),
   });
@@ -681,7 +720,7 @@ export interface BulkImportResponse {
 }
 
 export async function bulkImportQuestionsApi(questionsData: any): Promise<BulkImportResponse> {
-  const response = await fetch('/api/admin/questions/bulk-import', {
+  const response = await fetchWithRetry(getApiUrl('/api/admin/questions/bulk-import'), {
     method: 'POST',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(questionsData),
@@ -717,7 +756,7 @@ export async function fetchTopics(filters?: {
     const queryString = params.toString();
     const url = `/api/topics${queryString ? `?${queryString}` : ''}`;
 
-    const response = await fetch(url);
+    const response = await fetchWithRetry(getApiUrl(url));
     if (!response.ok) {
       return getFallbackTopics(filters);
     }
@@ -733,7 +772,7 @@ export async function fetchTopics(filters?: {
 
 export async function fetchTopicById(id: string): Promise<TopicRecord | null> {
   try {
-    const response = await fetch(`/api/topics/${encodeURIComponent(id)}`);
+    const response = await fetchWithRetry(getApiUrl(`/api/topics/${encodeURIComponent(id)}`));
     if (!response.ok) return null;
     return await response.json();
   } catch (e) {
@@ -743,7 +782,7 @@ export async function fetchTopicById(id: string): Promise<TopicRecord | null> {
 }
 
 export async function createTopic(topicData: Partial<TopicRecord>): Promise<TopicRecord> {
-  const response = await fetch('/api/topics', {
+  const response = await fetchWithRetry(getApiUrl('/api/topics'), {
     method: 'POST',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(topicData),
@@ -758,7 +797,7 @@ export async function createTopic(topicData: Partial<TopicRecord>): Promise<Topi
 }
 
 export async function updateTopic(id: string, topicData: Partial<TopicRecord>): Promise<TopicRecord> {
-  const response = await fetch(`/api/topics/${encodeURIComponent(id)}`, {
+  const response = await fetchWithRetry(getApiUrl(`/api/topics/${encodeURIComponent(id)}`), {
     method: 'PUT',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(topicData),
@@ -773,7 +812,7 @@ export async function updateTopic(id: string, topicData: Partial<TopicRecord>): 
 }
 
 export async function deleteTopic(id: string): Promise<boolean> {
-  const response = await fetch(`/api/topics/${encodeURIComponent(id)}`, {
+  const response = await fetchWithRetry(getApiUrl(`/api/topics/${encodeURIComponent(id)}`), {
     method: 'DELETE',
     headers: getAdminAuthHeaders(),
   });
@@ -788,7 +827,7 @@ export async function deleteTopic(id: string): Promise<boolean> {
 
 export async function verifyAdminPassword(password: string): Promise<boolean> {
   try {
-    const response = await fetch('/api/admin/login', {
+    const response = await fetchWithRetry(getApiUrl('/api/admin/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
@@ -812,7 +851,7 @@ export async function fetchAIModelsApi(): Promise<{
   serverConfig: { hasGeminiKey: boolean; hasOpenRouterKey: boolean };
 }> {
   try {
-    const response = await fetch('/api/ai/models');
+    const response = await fetchWithRetry(getApiUrl('/api/ai/models'));
     if (response.ok) {
       return await response.json();
     }
@@ -852,7 +891,7 @@ export async function askGeminiMentor(
     const customName = options?.customModelName || getStoredCustomModelName();
     const provider = options?.provider || (selectedModel.includes('/') || isCustom ? 'openrouter' : 'gemini');
 
-    const response = await fetch('/api/ai/chat', {
+    const response = await fetchWithRetry(getApiUrl('/api/ai/chat'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -921,7 +960,7 @@ export async function askGeminiMentorStream(
     const customName = options?.customModelName || getStoredCustomModelName();
     const provider = options?.provider || (selectedModel.includes('/') || isCustom ? 'openrouter' : 'gemini');
 
-    const response = await fetch('/api/ai/chat', {
+    const response = await fetch(getApiUrl('/api/ai/chat'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1050,7 +1089,7 @@ export async function solveQuestionFromPhoto(
     const customName = options?.customModelName || getStoredCustomModelName();
     const provider = options?.provider || (selectedModel.includes('/') || isCustom ? 'openrouter' : 'gemini');
 
-    const response = await fetch('/api/ai/solve-photo', {
+    const response = await fetchWithRetry(getApiUrl('/api/ai/solve-photo'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1085,7 +1124,7 @@ export async function solveQuestionFromPhoto(
 
 export async function getQuestionInsight(question: Question): Promise<string> {
   try {
-    const response = await fetch('/api/ai/explain-question', {
+    const response = await fetchWithRetry(getApiUrl('/api/ai/explain-question'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question }),
@@ -1111,7 +1150,7 @@ export async function fetchChatHistoryApi(): Promise<ChatMessage[]> {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch('/api/ai/history', { headers });
+    const response = await fetchWithRetry(getApiUrl('/api/ai/history'), { headers });
     if (!response.ok) return [];
 
     const data = await response.json();
@@ -1143,7 +1182,7 @@ export async function saveChatMessageApi(message: {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    await fetch('/api/ai/history', {
+    await fetchWithRetry(getApiUrl('/api/ai/history'), {
       method: 'POST',
       headers,
       body: JSON.stringify(message),
@@ -1161,7 +1200,7 @@ export async function clearChatHistoryApi(): Promise<boolean> {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const res = await fetch('/api/ai/history', {
+    const res = await fetchWithRetry(getApiUrl('/api/ai/history'), {
       method: 'DELETE',
       headers,
     });
@@ -1176,7 +1215,7 @@ export async function clearChatHistoryApi(): Promise<boolean> {
 
 export async function fetchKnowledgeSnippets(): Promise<KnowledgeSnippet[]> {
   try {
-    const response = await fetch('/api/knowledge-snippets');
+    const response = await fetchWithRetry(getApiUrl('/api/knowledge-snippets'));
     if (!response.ok) {
       return INITIAL_KNOWLEDGE_SNIPPETS;
     }
@@ -1193,7 +1232,7 @@ export async function fetchKnowledgeSnippets(): Promise<KnowledgeSnippet[]> {
 // ---------------- Admin Control Center & AI Staging API Client ----------------
 
 export async function fetchAdminStatsApi(): Promise<AdminSystemStats> {
-  const res = await fetch('/api/admin/stats', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/stats'), {
     headers: getAdminAuthHeaders(),
   });
   const data = await res.json();
@@ -1202,7 +1241,7 @@ export async function fetchAdminStatsApi(): Promise<AdminSystemStats> {
 }
 
 export async function fetchAdminKeysApi(): Promise<AdminApiKeyConfig[]> {
-  const res = await fetch('/api/admin/keys', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/keys'), {
     headers: getAdminAuthHeaders(),
   });
   const data = await res.json();
@@ -1211,7 +1250,7 @@ export async function fetchAdminKeysApi(): Promise<AdminApiKeyConfig[]> {
 }
 
 export async function revealAdminKeyApi(id: string): Promise<string> {
-  const res = await fetch('/api/admin/keys/reveal', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/keys/reveal'), {
     method: 'POST',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ id }),
@@ -1222,7 +1261,7 @@ export async function revealAdminKeyApi(id: string): Promise<string> {
 }
 
 export async function saveAdminKeysApi(keys: AdminApiKeyConfig[]): Promise<{ success: boolean; message: string }> {
-  const res = await fetch('/api/admin/keys', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/keys'), {
     method: 'POST',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ keys }),
@@ -1240,7 +1279,7 @@ export async function testAdminKeyApi(params: { key?: string; id?: string }): Pr
   message?: string;
   error?: string;
 }> {
-  const res = await fetch('/api/admin/keys/test', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/keys/test'), {
     method: 'POST',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(params),
@@ -1259,7 +1298,7 @@ export async function fetchAdminDraftsApi(filters?: {
   if (filters?.type) query.append('type', filters.type);
   if (filters?.search) query.append('search', filters.search);
 
-  const res = await fetch(`/api/admin/drafts?${query.toString()}`, {
+  const res = await fetchWithRetry(getApiUrl(`/api/admin/drafts?${query.toString()}`), {
     headers: getAdminAuthHeaders(),
   });
   const data = await res.json();
@@ -1274,7 +1313,7 @@ export async function createAdminDraftApi(draft: {
   source_info?: string;
   status?: string;
 }): Promise<AdminDraftItem> {
-  const res = await fetch('/api/admin/drafts', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/drafts'), {
     method: 'POST',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(draft),
@@ -1285,7 +1324,7 @@ export async function createAdminDraftApi(draft: {
 }
 
 export async function updateAdminDraftApi(id: string, payload: any, status?: string): Promise<AdminDraftItem> {
-  const res = await fetch(`/api/admin/drafts/${id}`, {
+  const res = await fetchWithRetry(getApiUrl(`/api/admin/drafts/${id}`), {
     method: 'PUT',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ payload, status }),
@@ -1296,7 +1335,7 @@ export async function updateAdminDraftApi(id: string, payload: any, status?: str
 }
 
 export async function deleteAdminDraftApi(id: string): Promise<boolean> {
-  const res = await fetch(`/api/admin/drafts/${id}`, {
+  const res = await fetchWithRetry(getApiUrl(`/api/admin/drafts/${id}`), {
     method: 'DELETE',
     headers: getAdminAuthHeaders(),
   });
@@ -1310,7 +1349,7 @@ export async function publishAdminDraftApi(id: string): Promise<{
   publishedItem: any;
   draft: AdminDraftItem;
 }> {
-  const res = await fetch(`/api/admin/drafts/${id}/publish`, {
+  const res = await fetchWithRetry(getApiUrl(`/api/admin/drafts/${id}/publish`), {
     method: 'POST',
     headers: getAdminAuthHeaders(),
   });
@@ -1324,7 +1363,7 @@ export async function batchPublishAdminDraftsApi(ids: string[]): Promise<{
   approvedCount: number;
   errors: any[];
 }> {
-  const res = await fetch('/api/admin/drafts/batch-publish', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/drafts/batch-publish'), {
     method: 'POST',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ ids }),
@@ -1338,7 +1377,7 @@ export async function batchRejectAdminDraftsApi(ids: string[]): Promise<{
   success: boolean;
   rejectedCount: number;
 }> {
-  const res = await fetch('/api/admin/drafts/batch-reject', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/drafts/batch-reject'), {
     method: 'POST',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ ids }),
@@ -1363,7 +1402,7 @@ export async function runAdminAiExtractApi(params: {
   drafts: AdminDraftItem[];
   reasoning?: string;
 }> {
-  const res = await fetch('/api/admin/extract', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/extract'), {
     method: 'POST',
     headers: getAdminAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(params),
@@ -1374,7 +1413,7 @@ export async function runAdminAiExtractApi(params: {
 }
 
 export async function fetchOpenRouterSystemHealthApi(): Promise<OpenRouterSystemHealthResponse> {
-  const res = await fetch('/api/admin/health/openrouter', {
+  const res = await fetchWithRetry(getApiUrl('/api/admin/health/openrouter'), {
     headers: getAdminAuthHeaders(),
   });
   const data = await res.json();
@@ -1389,7 +1428,7 @@ export async function reportQuestionApi(params: {
   details?: string;
   userId?: string;
 }): Promise<{ success: boolean; message: string; report_id?: string }> {
-  const res = await fetch('/api/reports', {
+  const res = await fetchWithRetry(getApiUrl('/api/reports'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

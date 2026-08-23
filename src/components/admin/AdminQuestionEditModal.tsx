@@ -192,9 +192,37 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
 
           {/* Question Text */}
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">
-              প্রশ্ন টেক্সট (বাংলা ও LaTeX)
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700">
+                প্রশ্ন টেক্সট (বাংলা, LaTeX ও TikZ ডায়াগ্রাম)
+              </label>
+              {/* Quick TikZ Inserters */}
+              <div className="flex items-center gap-1.5 text-[11px]">
+                <span className="text-slate-400 font-medium">TikZ যোগ করুন:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sampleTikz = `\n\\begin{tikzpicture}[scale=1.2]\n  \\draw[->, thick, blue] (0,0) -- (2,0) node[right] {\\( \\vec{A} \\)};\n  \\draw[->, thick, red] (2,0) -- (1,1.5) node[above] {\\( \\vec{B} \\)};\n  \\draw[->, thick, emerald] (1,1.5) -- (0,0) node[left] {\\( \\vec{C} \\)};\n\\end{tikzpicture}\n`;
+                    setFormData({ ...formData, question_text: (formData.question_text || '') + sampleTikz });
+                  }}
+                  className="px-2 py-0.5 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium border border-indigo-200 cursor-pointer"
+                  title="ভেক্টর ত্রিভুজ ডায়াগ্রাম কোড যুক্ত করুন"
+                >
+                  + ভেক্টর ত্রিভুজ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sampleAxis = `\n\\begin{tikzpicture}[scale=1.0]\n  \\draw[->, thick] (-0.5,0) -- (3,0) node[right] {\\( x \\)};\n  \\draw[->, thick] (0,-0.5) -- (0,3) node[above] {\\( y \\)};\n  \\draw[blue, thick] (0,0) -- (2,2) node[above right] {\\( \\vec{v} \\)};\n\\end{tikzpicture}\n`;
+                    setFormData({ ...formData, question_text: (formData.question_text || '') + sampleAxis });
+                  }}
+                  className="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium border border-emerald-200 cursor-pointer"
+                  title="অক্ষরেখা ডায়াগ্রাম কোড যুক্ত করুন"
+                >
+                  + স্থানাঙ্ক অক্ষ
+                </button>
+              </div>
+            </div>
             <textarea
               value={formData.question_text || ''}
               onChange={(e) => setFormData({ ...formData, question_text: e.target.value })}
@@ -205,7 +233,7 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
             />
             {formData.question_text && (
               <div className="mt-1.5 p-2.5 bg-slate-50 rounded-lg text-xs text-slate-800 border border-slate-200">
-                <span className="text-slate-400 font-semibold block mb-0.5">লাইভ প্রিভিউ:</span>
+                <span className="text-slate-400 font-semibold block mb-0.5">লাইভ প্রিভিউ (LaTeX ও TikZ):</span>
                 <MathText text={formData.question_text} />
               </div>
             )}
@@ -355,16 +383,37 @@ export const AdminQuestionEditModal: React.FC<AdminQuestionEditModalProps> = ({
 
           {/* Explanation */}
           <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">
-              ব্যাখ্যা ও শর্টকাট টেকনিক
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700">
+                ব্যাখ্যা ও শর্টকাট টেকনিক (বাংলা, LaTeX ও TikZ)
+              </label>
+              <div className="flex items-center gap-1.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sampleTikz = `\n\\begin{tikzpicture}[scale=1.0]\n  \\draw[->, thick, blue] (0,0) -- (2,0) node[right] {\\( \\vec{F} \\)};\n  \\draw[dashed, gray] (0,0) -- (0,2);\n  \\draw[->, thick, red] (0,0) -- (1.4,1.4) node[above right] {\\( \\vec{R} \\)};\n\\end{tikzpicture}\n`;
+                    setFormData({ ...formData, explanation: (formData.explanation || '') + sampleTikz });
+                  }}
+                  className="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium border border-emerald-200 cursor-pointer"
+                  title="ব্যাখ্যায় ভেক্টর লব্ধি ডায়াগ্রাম যুক্ত করুন"
+                >
+                  + বলের লব্ধি ডায়াগ্রাম
+                </button>
+              </div>
+            </div>
             <textarea
               value={formData.explanation || ''}
               onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
               rows={3}
               placeholder="প্রশ্নের বিস্তারিত সমাধান..."
-              className="w-full p-3 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+              className="w-full p-3 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-mono"
             />
+            {formData.explanation && (
+              <div className="mt-1.5 p-2.5 bg-slate-50 rounded-lg text-xs text-slate-800 border border-slate-200">
+                <span className="text-slate-400 font-semibold block mb-0.5">ব্যাখ্যার লাইভ প্রিভিউ:</span>
+                <MathText text={formData.explanation} />
+              </div>
+            )}
           </div>
 
           {/* Explanation Image Attachment (Cloudinary Upload) */}

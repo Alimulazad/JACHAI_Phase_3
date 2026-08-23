@@ -129,7 +129,7 @@ export const ADMISSION_CALENDAR_SCHEDULES = [
 • সময়: ১ ঘণ্টা ৩০ মিনিট
 • নেগেটিভ মার্কিং: ০.২৫
 • বিষয়সমূহ: পদার্থবিজ্ঞান, রসায়ন, উচ্চতর গণিত, জীববিজ্ঞান/বাংলা/ইংরেজি
-• প্রস্তুতি ট্র্যাক করুন: যাচাই Varsity AI অ্যাপ`,
+• প্রস্তুতি ট্র্যাক করুন: PrepTest Varsity AI অ্যাপ`,
     location: 'University of Dhaka, Nilkhet, Dhaka-1000',
   },
   {
@@ -145,7 +145,7 @@ export const ADMISSION_CALENDAR_SCHEDULES = [
 • সময়: ৩ ঘণ্টা (প্রিলিমিনারি ও মূল লিখিত)
 • ক্যালকুলেটর: অনুমোদিত সায়েন্টিফিক মডেল
 • বিষয়সমূহ: উচ্চতর গণিত, পদার্থবিজ্ঞান ও রসায়ন
-• নো-ক্যালকুলেটর শর্টকাট ও ট্রিকস চর্চা করুন যাচাই AI অ্যাপে`,
+• নো-ক্যালকুলেটর শর্টকাট ও ট্রিকস চর্চা করুন PrepTest AI অ্যাপে`,
     location: 'BUET Campus, Palashi, Dhaka-1000',
   },
   {
@@ -161,7 +161,7 @@ export const ADMISSION_CALENDAR_SCHEDULES = [
 • সময়: ১ ঘণ্টা (৬০ মিনিট)
 • বিষয়বণ্টন: জীববিজ্ঞান (৩০), রসায়ন (২৫), পদার্থবিজ্ঞান (২০), ইংরেজি (১৫), সাধারণ জ্ঞান (১০)
 • নেগেটিভ মার্কিং: ০.২৫ (ক্যালকুলেটর ব্যবহার নিষিদ্ধ)
-• মক টেস্ট দিন: যাচাই AI প্র্যাকটিস প্ল্যাটফর্ম`,
+• মক টেস্ট দিন: PrepTest AI প্র্যাকটিস প্ল্যাটফর্ম`,
     location: 'Selected Medical Exam Centers Nationwide',
   },
   {
@@ -175,7 +175,7 @@ export const ADMISSION_CALENDAR_SCHEDULES = [
     description: `🛡️ বাংলাদেশ ইউনিভার্সিটি অব প্রফেশনালস (BUP) বিজ্ঞান ও প্রযুক্তি অনুষদ ভর্তি পরীক্ষা
 • বিষয়: পদার্থবিজ্ঞান, গণিত, রসায়ন, ইংরেজি
 • সময়: ৬০ মিনিট
-• যাচাই AI স্পেশাল মক টেস্ট সম্পন্ন করুন।`,
+• PrepTest AI স্পেশাল মক টেস্ট সম্পন্ন করুন।`,
     location: 'BUP Campus, Mirpur Cantonment, Dhaka',
   },
   {
@@ -250,7 +250,7 @@ export const syncAdmissionDatesToCalendar = async (
       // 2. Create Application Deadline Event
       const deadlineEventBody = {
         summary: `⏰ [আবেদনের শেষ তারিখ] ${schedule.shortName} আবেদন ফর্ম সাবমিশন`,
-        description: `⚠️ সতর্কবার্তা: আজ ${schedule.name} এর অনলাইন আবেদন ফি ও ফর্ম জমার শেষ সময়। দ্রুত সম্পন্ন করুন!\nযাচাই AI ড্যাশবোর্ড থেকে প্রস্তুতি যাচাই করুন।`,
+        description: `⚠️ সতর্কবার্তা: আজ ${schedule.name} এর অনলাইন আবেদন ফি ও ফর্ম জমার শেষ সময়। দ্রুত সম্পন্ন করুন!\nPrepTest AI ড্যাশবোর্ড থেকে প্রস্তুতি যাচাই করুন।`,
         start: {
           date: schedule.applicationDeadline,
         },
@@ -356,7 +356,7 @@ export const createKeepNotePayload = (
   title: string,
   content: string
 ): { title: string; text: string; keepUrl: string } => {
-  const formattedText = `${title}\n\n${content}\n\n— সংরক্ষিত যাচাই AI এডমিশন মেন্টর থেকে`;
+  const formattedText = `${title}\n\n${content}\n\n— সংরক্ষিত PrepTest AI এডমিশন মেন্টর থেকে`;
   // Google Keep web compose link
   const keepUrl = `https://keep.google.com/#create/${encodeURIComponent(title)}`;
   return {

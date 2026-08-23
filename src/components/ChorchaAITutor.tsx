@@ -64,7 +64,7 @@ interface ChorchaAITutorProps {
 const DEFAULT_WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
-  content: `আসসালামু আলাইকুম! আমি **যাচাই AI** (JACHAI AI), তোমার ব্যক্তিগত ভার্সিটি ও মেডিকেল অ্যাডমিশন মেন্টর। 🎓\n\nপদার্থবিজ্ঞান, রসায়ন, উচ্চতর গণিত বা জীববিজ্ঞানের যেকোনো জটিল প্রশ্ন, শর্টকাট কৌশল, নো-ক্যালকুলেটর ট্রিকস বা বিগত বছরের প্রশ্ন নিয়ে আমাকে জিজ্ঞেস করতে পারো। এমনকি কোনো প্রশ্নের ছবি আপলোড করলেও আমি নির্ভুল সমাধান ও শর্টকাটসহ বুঝিয়ে দেবো!\n\n💡 *যেকোনো উত্তরের নিচে 'Add to Google Tasks' অথবা 'Save Note to Keep' এ ক্লিক করে সহজে নোট সংরক্ষণ করতে পারবে।*`,
+  content: `আসসালামু আলাইকুম! আমি **PrepTest AI**, তোমার ব্যক্তিগত ভার্সিটি ও মেডিকেল অ্যাডমিশন মেন্টর। 🎓\n\nপদার্থবিজ্ঞান, রসায়ন, উচ্চতর গণিত বা জীববিজ্ঞানের যেকোনো জটিল প্রশ্ন, শর্টকাট কৌশল, নো-ক্যালকুলেটর ট্রিকস বা বিগত বছরের প্রশ্ন নিয়ে আমাকে জিজ্ঞেস করতে পারো। এমনকি কোনো প্রশ্নের ছবি আপলোড করলেও আমি নির্ভুল সমাধান ও শর্টকাটসহ বুঝিয়ে দেবো!\n\n💡 *যেকোনো উত্তরের নিচে 'Add to Google Tasks' অথবা 'Save Note to Keep' এ ক্লিক করে সহজে নোট সংরক্ষণ করতে পারবে।*`,
   timestamp: Date.now(),
 };
 
@@ -183,8 +183,8 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
       const firstLine = msg.content.split('\n')[0].replace(/[#*`_✅📝🚀⚠️🎯]/g, '').trim();
       const taskTitle =
         firstLine.length > 0 && firstLine.length < 80
-          ? `[যাচাই AI] ${firstLine}`
-          : `[যাচাই AI এডমিশন নোট] ${new Date().toLocaleDateString()}`;
+          ? `[PrepTest AI] ${firstLine}`
+          : `[PrepTest AI এডমিশন নোট] ${new Date().toLocaleDateString()}`;
 
       const res = await addTaskToGoogleTasks(token, {
         title: taskTitle,
@@ -210,7 +210,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
     try {
       const firstLine = msg.content.split('\n')[0].replace(/[#*`_✅📝🚀⚠️🎯]/g, '').trim();
       const noteTitle =
-        firstLine.length > 0 && firstLine.length < 60 ? firstLine : 'যাচাই AI শর্টকাট ও সমাধান নোট';
+        firstLine.length > 0 && firstLine.length < 60 ? firstLine : 'PrepTest AI শর্টকাট ও সমাধান নোট';
 
       const keepData = createKeepNotePayload(noteTitle, msg.content);
 
@@ -484,7 +484,7 @@ export const ChorchaAITutor: React.FC<ChorchaAITutorProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="font-extrabold text-slate-900 text-base sm:text-lg leading-tight tracking-tight truncate">
-                  যাচাই AI মেন্টর
+                  PrepTest AI মেন্টর
                 </h2>
                 {/* Clickable Model Selector Pill */}
                 <button

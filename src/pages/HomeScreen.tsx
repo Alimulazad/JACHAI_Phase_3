@@ -119,11 +119,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <div className="relative z-10 flex items-center justify-between gap-4">
             <div className="max-w-[65%] sm:max-w-md">
               <div className="inline-block px-2.5 py-0.5 rounded-full bg-white/20 text-emerald-100 text-[11px] font-bold mb-1.5 backdrop-blur-xs">
-                JACHAI — প্রস্তুতি ও মূল্যায়ন
+                PrepTest — টেস্ট দাও বেস্ট হও
               </div>
 
               <h2 className="text-base sm:text-xl font-black tracking-tight leading-snug mb-3 text-white">
-                "যাচাই করো নিজেকে, ভর্তি যুদ্ধে বাঁচাইতে"
+                "টেস্ট দাও বেস্ট হও"
               </h2>
 
               <button
@@ -161,7 +161,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         </div>
       )}
 
-      {/* 3. চারটা quick-action আইকন বাটন এক সারিতে: প্রশ্নব্যাংক, দ্রুত প্র্যাকটিস, মক পরীক্ষা, যাচাই AI */}
+      {/* 3. চারটা quick-action আইকন বাটন এক সারিতে: প্রশ্নব্যাংক, দ্রুত প্র্যাকটিস, মক পরীক্ষা, PrepTest AI */}
       <div className="grid grid-cols-4 gap-2 sm:gap-3">
         {/* Button 1: প্রশ্নব্যাংক */}
         <button
@@ -205,7 +205,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           </span>
         </button>
 
-        {/* Button 4: যাচাই AI */}
+        {/* Button 4: PrepTest AI */}
         <button
           id="btn-quick-ai-tutor"
           onClick={onOpenAITutor}
@@ -215,7 +215,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <Bot className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.2]" />
           </div>
           <span className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 mt-2 text-center leading-tight whitespace-nowrap">
-            যাচাই AI
+            PrepTest AI
           </span>
         </button>
       </div>

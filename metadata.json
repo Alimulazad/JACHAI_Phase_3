@@ -1,6 +1,6 @@
 {
-  "name": "Remix JACHAI Varsity Admission AI",
-  "description": "Comprehensive admission preparation platform for Bangladeshi universities featuring smart question banks, mock exams, physics \u0026 math solver with LaTeX, error logs, and Gemini AI tutor inspired by Chorcha.",
+  "name": "PrepTest - ভার্সিটি ভর্তি প্রস্তুতি",
+  "description": "PrepTest — টেস্ট দাও বেস্ট হও। বাংলাদেশের ভার্সিটি ভর্তি পরীক্ষার জন্য পূর্ণাঙ্গ প্রশ্নব্যাংক, মক টেস্ট, ভুল খাতা ও জেমিনাই এআই মেন্টর।",
   "requestFramePermissions": [
     "camera"
   ],

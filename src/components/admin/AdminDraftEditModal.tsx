@@ -75,7 +75,9 @@ export const AdminDraftEditModal: React.FC<AdminDraftEditModalProps> = ({
       // First save changes
       await onSave(draft.id, formData);
       // Then publish
-      await onPublishDirect(draft.id);
+      if (onPublishDirect) {
+        await onPublishDirect(draft.id);
+      }
       onClose();
     } catch (e: any) {
       setErrorMsg(e.message || 'লাইভ প্রকাশ ব্যর্থ');

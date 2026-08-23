@@ -22,6 +22,11 @@ import AuthModal from './components/AuthModal';
 import { ScreenSkeletonLoader } from './components/common/SkeletonLoader';
 import { useToast } from './context/ToastContext';
 import { useTheme } from './context/ThemeContext';
+import { useNetwork } from './context/NetworkContext';
+import { InitialOfflineNotice } from './components/common/InitialOfflineNotice';
+import { NetworkStatusBanner } from './components/common/NetworkStatusBanner';
+
+
 
 // Code-split heavy routes to optimize initial bundle size & load performance
 const QuestionBankScreen = lazy(() => import('./pages/QuestionBankScreen'));
@@ -47,6 +52,7 @@ export function App() {
   const navigate = useNavigate();
   const toast = useToast();
   const { theme, setTheme } = useTheme();
+  const { isOnline, isOfflineMode, continueOffline, initialConnectionFailed, triggerReconnection, registerSyncCallback } = useNetwork();
 
   // Derive currentTab from path
   const getCurrentTabFromPath = (pathname: string): NavigationTab => {
@@ -76,20 +82,6 @@ export function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExamFlowActive, setIsExamFlowActive] = useState(false);
 
-  // Check auth session on startup
-  useEffect(() => {
-    async function checkAuth() {
-      const authData = await fetchCurrentUserApi();
-      if (authData) {
-        setCurrentUser(authData.user);
-        if (authData.progress) {
-          setUserProgress(authData.progress);
-        }
-      }
-    }
-    checkAuth();
-  }, []);
-
   // Load questions from PostgreSQL API
   const loadDatabaseQuestions = useCallback(async () => {
     try {
@@ -105,9 +97,40 @@ export function App() {
     }
   }, []);
 
+  // Register reconnection sync callback
+  useEffect(() => {
+    const unregister = registerSyncCallback('main-app-sync', async () => {
+      console.log('Network restored - syncing questions and profile');
+      await loadDatabaseQuestions();
+      const authData = await fetchCurrentUserApi();
+      if (authData) {
+        setCurrentUser(authData.user);
+        if (authData.progress) {
+          setUserProgress(authData.progress);
+        }
+      }
+    });
+    return unregister;
+  }, [registerSyncCallback, loadDatabaseQuestions]);
+
+  // Check auth session on startup
+  useEffect(() => {
+    async function checkAuth() {
+      const authData = await fetchCurrentUserApi();
+      if (authData) {
+        setCurrentUser(authData.user);
+        if (authData.progress) {
+          setUserProgress(authData.progress);
+        }
+      }
+    }
+    checkAuth();
+  }, []);
+
   useEffect(() => {
     loadDatabaseQuestions();
   }, [loadDatabaseQuestions]);
+
 
   const handleUpdateProgress = (updated: Partial<UserProgress>) => {
     setUserProgress((prev) => {
@@ -181,8 +204,36 @@ export function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // If initial server connection failed and user has not chosen offline mode yet, show full screen initial offline screen
+  if (initialConnectionFailed && !isOfflineMode) {
+    return (
+      <InitialOfflineNotice
+        onRetry={async () => {
+          const ok = await triggerReconnection();
+          if (ok) {
+            await loadDatabaseQuestions();
+            const authData = await fetchCurrentUserApi();
+            if (authData) {
+              setCurrentUser(authData.user);
+              if (authData.progress) {
+                setUserProgress(authData.progress);
+              }
+            }
+            return true;
+          }
+          return false;
+        }}
+        onContinueOffline={continueOffline}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-100/70 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex flex-col selection:bg-emerald-500 selection:text-white transition-colors duration-200">
+      {/* Network Offline & Reconnecting Warning Banner */}
+      <NetworkStatusBanner />
+
+
       {/* Top Header Navbar */}
       {!(currentTab === 'exam' && isExamFlowActive) && (
         <Navbar
@@ -503,7 +554,7 @@ export function App() {
                   <span>PWA ও অফলাইন ফ্রেন্ডলি</span>
                 </div>
                 <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed">
-                  যাচাই (JACHAI) অ্যান্ড্রয়েড হোমস্ক্রিনে ইনস্টল করে অফলাইন ক্যাশ সহ দ্রুত ব্যবহার করা যায়।
+                  PrepTest অ্যান্ড্রয়েড হোমস্ক্রিনে ইনস্টল করে অফলাইন ক্যাশ সহ দ্রুত ব্যবহার করা যায়।
                 </p>
               </div>
 

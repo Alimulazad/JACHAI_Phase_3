@@ -4,6 +4,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import type { Components } from 'react-markdown';
 import 'katex/dist/katex.min.css';
+import { TikzRenderer, isTikzMarkup, extractTikzCode } from './TikzRenderer';
 
 interface MathTextProps {
   text: string;
@@ -63,6 +64,13 @@ const MARKDOWN_COMPONENTS: Components = {
   ),
   code: ({ children, className: codeClass }) => {
     const isInline = !codeClass;
+    const rawContent = Array.isArray(children) ? children.join('') : String(children || '');
+
+    // Check if this code block is TikZ diagram
+    if (codeClass?.includes('language-tikz') || isTikzMarkup(rawContent)) {
+      return <TikzRenderer code={extractTikzCode(rawContent)} />;
+    }
+
     if (isInline) {
       return (
         <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-blue-900 dark:text-blue-300 font-mono text-sm border border-slate-200 dark:border-slate-700">
@@ -92,28 +100,79 @@ const MARKDOWN_COMPONENTS: Components = {
   ),
 };
 
+// Splits input text into Markdown and raw TikZ blocks
+interface TextBlock {
+  type: 'markdown' | 'tikz';
+  content: string;
+}
+
+function parseTextBlocks(inputText: string): TextBlock[] {
+  if (!inputText) return [];
+
+  // Match raw \begin{tikzpicture}...\end{tikzpicture}
+  const tikzRegex = /(\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\})/gi;
+  const blocks: TextBlock[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = tikzRegex.exec(inputText)) !== null) {
+    const matchStart = match.index;
+    const matchEnd = tikzRegex.lastIndex;
+
+    // Push preceding markdown text if any
+    if (matchStart > lastIndex) {
+      const mdContent = inputText.slice(lastIndex, matchStart);
+      if (mdContent.trim()) {
+        blocks.push({ type: 'markdown', content: mdContent });
+      }
+    }
+
+    // Push the TikZ block
+    blocks.push({
+      type: 'tikz',
+      content: match[1],
+    });
+
+    lastIndex = matchEnd;
+  }
+
+  // Push remaining markdown text if any
+  if (lastIndex < inputText.length) {
+    const tail = inputText.slice(lastIndex);
+    if (tail.trim()) {
+      blocks.push({ type: 'markdown', content: tail });
+    }
+  }
+
+  return blocks.length > 0 ? blocks : [{ type: 'markdown', content: inputText }];
+}
+
 const MathTextComponent: React.FC<MathTextProps> = ({ text, className = '' }) => {
-  const renderedContent = useMemo(() => {
-    if (!text) return null;
-    return (
-      <ReactMarkdown
-        remarkPlugins={REMARK_PLUGINS}
-        rehypePlugins={REHYPE_PLUGINS}
-        components={MARKDOWN_COMPONENTS}
-      >
-        {text}
-      </ReactMarkdown>
-    );
-  }, [text]);
+  const blocks = useMemo(() => parseTextBlocks(text), [text]);
 
   if (!text) return null;
 
   return (
     <div className={`markdown-math-content leading-relaxed text-inherit space-y-2.5 ${className}`}>
-      {renderedContent}
+      {blocks.map((block, idx) => {
+        if (block.type === 'tikz') {
+          return <TikzRenderer key={idx} code={block.content} />;
+        }
+        return (
+          <ReactMarkdown
+            key={idx}
+            remarkPlugins={REMARK_PLUGINS}
+            rehypePlugins={REHYPE_PLUGINS}
+            components={MARKDOWN_COMPONENTS}
+          >
+            {block.content}
+          </ReactMarkdown>
+        );
+      })}
     </div>
   );
 };
 
 export const MathText = React.memo(MathTextComponent);
 export default MathText;
+

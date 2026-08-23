@@ -60,3 +60,18 @@ self.addEventListener('fetch', (event) => {
     fetch(request).catch(() => caches.match(request))
   );
 });
+
+// Background Sync handler
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-user-progress') {
+    event.waitUntil(
+      // Inform clients to sync local progress to server
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({ type: 'BACKGROUND_SYNC_PROGRESS' });
+        });
+      })
+    );
+  }
+});
+
